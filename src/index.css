@@ -1,6 +1,32 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Black & white theme: chromatic Tailwind palettes resolve to grayscale, so
+   utilities like bg-blue-600 render as neutral grays. Red and green are left
+   untouched on purpose: red marks negative signals (errors, deletes, failures)
+   and green marks positive ones (success, wins, selected votes). */
+@theme {
+  --color-orange-50: oklch(98.5% 0 0); --color-orange-100: oklch(97% 0 0); --color-orange-200: oklch(92.2% 0 0); --color-orange-300: oklch(87% 0 0); --color-orange-400: oklch(70.8% 0 0); --color-orange-500: oklch(55.6% 0 0); --color-orange-600: oklch(43.9% 0 0); --color-orange-700: oklch(37.1% 0 0); --color-orange-800: oklch(26.9% 0 0); --color-orange-900: oklch(20.5% 0 0); --color-orange-950: oklch(14.5% 0 0);
+  --color-amber-50: oklch(98.5% 0 0); --color-amber-100: oklch(97% 0 0); --color-amber-200: oklch(92.2% 0 0); --color-amber-300: oklch(87% 0 0); --color-amber-400: oklch(70.8% 0 0); --color-amber-500: oklch(55.6% 0 0); --color-amber-600: oklch(43.9% 0 0); --color-amber-700: oklch(37.1% 0 0); --color-amber-800: oklch(26.9% 0 0); --color-amber-900: oklch(20.5% 0 0); --color-amber-950: oklch(14.5% 0 0);
+  --color-yellow-50: oklch(98.5% 0 0); --color-yellow-100: oklch(97% 0 0); --color-yellow-200: oklch(92.2% 0 0); --color-yellow-300: oklch(87% 0 0); --color-yellow-400: oklch(70.8% 0 0); --color-yellow-500: oklch(55.6% 0 0); --color-yellow-600: oklch(43.9% 0 0); --color-yellow-700: oklch(37.1% 0 0); --color-yellow-800: oklch(26.9% 0 0); --color-yellow-900: oklch(20.5% 0 0); --color-yellow-950: oklch(14.5% 0 0);
+  --color-lime-50: oklch(98.5% 0 0); --color-lime-100: oklch(97% 0 0); --color-lime-200: oklch(92.2% 0 0); --color-lime-300: oklch(87% 0 0); --color-lime-400: oklch(70.8% 0 0); --color-lime-500: oklch(55.6% 0 0); --color-lime-600: oklch(43.9% 0 0); --color-lime-700: oklch(37.1% 0 0); --color-lime-800: oklch(26.9% 0 0); --color-lime-900: oklch(20.5% 0 0); --color-lime-950: oklch(14.5% 0 0);
+  --color-emerald-50: oklch(98.5% 0 0); --color-emerald-100: oklch(97% 0 0); --color-emerald-200: oklch(92.2% 0 0); --color-emerald-300: oklch(87% 0 0); --color-emerald-400: oklch(70.8% 0 0); --color-emerald-500: oklch(55.6% 0 0); --color-emerald-600: oklch(43.9% 0 0); --color-emerald-700: oklch(37.1% 0 0); --color-emerald-800: oklch(26.9% 0 0); --color-emerald-900: oklch(20.5% 0 0); --color-emerald-950: oklch(14.5% 0 0);
+  --color-teal-50: oklch(98.5% 0 0); --color-teal-100: oklch(97% 0 0); --color-teal-200: oklch(92.2% 0 0); --color-teal-300: oklch(87% 0 0); --color-teal-400: oklch(70.8% 0 0); --color-teal-500: oklch(55.6% 0 0); --color-teal-600: oklch(43.9% 0 0); --color-teal-700: oklch(37.1% 0 0); --color-teal-800: oklch(26.9% 0 0); --color-teal-900: oklch(20.5% 0 0); --color-teal-950: oklch(14.5% 0 0);
+  --color-cyan-50: oklch(98.5% 0 0); --color-cyan-100: oklch(97% 0 0); --color-cyan-200: oklch(92.2% 0 0); --color-cyan-300: oklch(87% 0 0); --color-cyan-400: oklch(70.8% 0 0); --color-cyan-500: oklch(55.6% 0 0); --color-cyan-600: oklch(43.9% 0 0); --color-cyan-700: oklch(37.1% 0 0); --color-cyan-800: oklch(26.9% 0 0); --color-cyan-900: oklch(20.5% 0 0); --color-cyan-950: oklch(14.5% 0 0);
+  --color-sky-50: oklch(98.5% 0 0); --color-sky-100: oklch(97% 0 0); --color-sky-200: oklch(92.2% 0 0); --color-sky-300: oklch(87% 0 0); --color-sky-400: oklch(70.8% 0 0); --color-sky-500: oklch(55.6% 0 0); --color-sky-600: oklch(43.9% 0 0); --color-sky-700: oklch(37.1% 0 0); --color-sky-800: oklch(26.9% 0 0); --color-sky-900: oklch(20.5% 0 0); --color-sky-950: oklch(14.5% 0 0);
+  --color-blue-50: oklch(98.5% 0 0); --color-blue-100: oklch(97% 0 0); --color-blue-200: oklch(92.2% 0 0); --color-blue-300: oklch(87% 0 0); --color-blue-400: oklch(70.8% 0 0); --color-blue-500: oklch(55.6% 0 0); --color-blue-600: oklch(43.9% 0 0); --color-blue-700: oklch(37.1% 0 0); --color-blue-800: oklch(26.9% 0 0); --color-blue-900: oklch(20.5% 0 0); --color-blue-950: oklch(14.5% 0 0);
+  --color-indigo-50: oklch(98.5% 0 0); --color-indigo-100: oklch(97% 0 0); --color-indigo-200: oklch(92.2% 0 0); --color-indigo-300: oklch(87% 0 0); --color-indigo-400: oklch(70.8% 0 0); --color-indigo-500: oklch(55.6% 0 0); --color-indigo-600: oklch(43.9% 0 0); --color-indigo-700: oklch(37.1% 0 0); --color-indigo-800: oklch(26.9% 0 0); --color-indigo-900: oklch(20.5% 0 0); --color-indigo-950: oklch(14.5% 0 0);
+  --color-violet-50: oklch(98.5% 0 0); --color-violet-100: oklch(97% 0 0); --color-violet-200: oklch(92.2% 0 0); --color-violet-300: oklch(87% 0 0); --color-violet-400: oklch(70.8% 0 0); --color-violet-500: oklch(55.6% 0 0); --color-violet-600: oklch(43.9% 0 0); --color-violet-700: oklch(37.1% 0 0); --color-violet-800: oklch(26.9% 0 0); --color-violet-900: oklch(20.5% 0 0); --color-violet-950: oklch(14.5% 0 0);
+  --color-purple-50: oklch(98.5% 0 0); --color-purple-100: oklch(97% 0 0); --color-purple-200: oklch(92.2% 0 0); --color-purple-300: oklch(87% 0 0); --color-purple-400: oklch(70.8% 0 0); --color-purple-500: oklch(55.6% 0 0); --color-purple-600: oklch(43.9% 0 0); --color-purple-700: oklch(37.1% 0 0); --color-purple-800: oklch(26.9% 0 0); --color-purple-900: oklch(20.5% 0 0); --color-purple-950: oklch(14.5% 0 0);
+  --color-fuchsia-50: oklch(98.5% 0 0); --color-fuchsia-100: oklch(97% 0 0); --color-fuchsia-200: oklch(92.2% 0 0); --color-fuchsia-300: oklch(87% 0 0); --color-fuchsia-400: oklch(70.8% 0 0); --color-fuchsia-500: oklch(55.6% 0 0); --color-fuchsia-600: oklch(43.9% 0 0); --color-fuchsia-700: oklch(37.1% 0 0); --color-fuchsia-800: oklch(26.9% 0 0); --color-fuchsia-900: oklch(20.5% 0 0); --color-fuchsia-950: oklch(14.5% 0 0);
+  --color-pink-50: oklch(98.5% 0 0); --color-pink-100: oklch(97% 0 0); --color-pink-200: oklch(92.2% 0 0); --color-pink-300: oklch(87% 0 0); --color-pink-400: oklch(70.8% 0 0); --color-pink-500: oklch(55.6% 0 0); --color-pink-600: oklch(43.9% 0 0); --color-pink-700: oklch(37.1% 0 0); --color-pink-800: oklch(26.9% 0 0); --color-pink-900: oklch(20.5% 0 0); --color-pink-950: oklch(14.5% 0 0);
+  --color-rose-50: oklch(98.5% 0 0); --color-rose-100: oklch(97% 0 0); --color-rose-200: oklch(92.2% 0 0); --color-rose-300: oklch(87% 0 0); --color-rose-400: oklch(70.8% 0 0); --color-rose-500: oklch(55.6% 0 0); --color-rose-600: oklch(43.9% 0 0); --color-rose-700: oklch(37.1% 0 0); --color-rose-800: oklch(26.9% 0 0); --color-rose-900: oklch(20.5% 0 0); --color-rose-950: oklch(14.5% 0 0);
+  --color-slate-50: oklch(98.5% 0 0); --color-slate-100: oklch(97% 0 0); --color-slate-200: oklch(92.2% 0 0); --color-slate-300: oklch(87% 0 0); --color-slate-400: oklch(70.8% 0 0); --color-slate-500: oklch(55.6% 0 0); --color-slate-600: oklch(43.9% 0 0); --color-slate-700: oklch(37.1% 0 0); --color-slate-800: oklch(26.9% 0 0); --color-slate-900: oklch(20.5% 0 0); --color-slate-950: oklch(14.5% 0 0);
+  --color-gray-50: oklch(98.5% 0 0); --color-gray-100: oklch(97% 0 0); --color-gray-200: oklch(92.2% 0 0); --color-gray-300: oklch(87% 0 0); --color-gray-400: oklch(70.8% 0 0); --color-gray-500: oklch(55.6% 0 0); --color-gray-600: oklch(43.9% 0 0); --color-gray-700: oklch(37.1% 0 0); --color-gray-800: oklch(26.9% 0 0); --color-gray-900: oklch(20.5% 0 0); --color-gray-950: oklch(14.5% 0 0);
+  --color-zinc-50: oklch(98.5% 0 0); --color-zinc-100: oklch(97% 0 0); --color-zinc-200: oklch(92.2% 0 0); --color-zinc-300: oklch(87% 0 0); --color-zinc-400: oklch(70.8% 0 0); --color-zinc-500: oklch(55.6% 0 0); --color-zinc-600: oklch(43.9% 0 0); --color-zinc-700: oklch(37.1% 0 0); --color-zinc-800: oklch(26.9% 0 0); --color-zinc-900: oklch(20.5% 0 0); --color-zinc-950: oklch(14.5% 0 0);
+  --color-stone-50: oklch(98.5% 0 0); --color-stone-100: oklch(97% 0 0); --color-stone-200: oklch(92.2% 0 0); --color-stone-300: oklch(87% 0 0); --color-stone-400: oklch(70.8% 0 0); --color-stone-500: oklch(55.6% 0 0); --color-stone-600: oklch(43.9% 0 0); --color-stone-700: oklch(37.1% 0 0); --color-stone-800: oklch(26.9% 0 0); --color-stone-900: oklch(20.5% 0 0); --color-stone-950: oklch(14.5% 0 0);
+}
+
 @font-face {
   font-family: monlam-2;
   src: url('/font/MonlamUniOuChan2.ttf') format('truetype');
@@ -25,27 +51,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* New Design System - Primary Colors */
-  --color-primary-50: #f1eff5;
-  --color-primary-100: #ccb4f7;
-  --color-primary-200: #a881f1;
-  --color-primary-300: #854deb;
-  --color-primary-400: #6119e6;
-  --color-primary-500: #4b14b2;
-  --color-primary-600: #360e7e;
-  --color-primary-700: #20084b;
-  --color-primary-800: #0a0317;
+  /* Primary - monochrome (black) */
+  --color-primary-50: #fafafa;
+  --color-primary-100: #f5f5f5;
+  --color-primary-200: #e5e5e5;
+  --color-primary-300: #d4d4d4;
+  --color-primary-400: #a3a3a3;
+  --color-primary-500: #262626;
+  --color-primary-600: #171717;
+  --color-primary-700: #0a0a0a;
+  --color-primary-800: #000000;
+  --color-primary-900: #000000;
+  --color-primary-950: #000000;
   
-  /* New Design System - Secondary Colors */
-  --color-secondary-50: #eff5f5;
-  --color-secondary-100: #b4f1f7;
-  --color-secondary-200: #81e8f1;
-  --color-secondary-300: #4ddeeb;
-  --color-secondary-400: #19d4e6;
-  --color-secondary-500: #14a5b2;
-  --color-secondary-600: #0e757e;
-  --color-secondary-700: #08454b;
-  --color-secondary-800: #031517;
+  /* Secondary - monochrome (gray) */
+  --color-secondary-50: #fafafa;
+  --color-secondary-100: #f5f5f5;
+  --color-secondary-200: #e5e5e5;
+  --color-secondary-300: #d4d4d4;
+  --color-secondary-400: #a3a3a3;
+  --color-secondary-500: #737373;
+  --color-secondary-600: #525252;
+  --color-secondary-700: #404040;
+  --color-secondary-800: #262626;
+  --color-secondary-900: #000000;
+  --color-secondary-950: #000000;
   
   /* New Design System - Neutral Colors */
   --color-neutral-50: #fafafa;
@@ -74,16 +104,16 @@
   --muted-foreground: var(--color-neutral-600);
   --accent: var(--color-primary-100);
   --accent-foreground: var(--color-primary-800);
-  --destructive: #ef4444;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: var(--color-neutral-200);
   --input: var(--color-neutral-200);
   --ring: var(--color-primary-500);
-  --chart-1: var(--color-primary-500);
-  --chart-2: var(--color-secondary-400);
-  --chart-3: var(--color-primary-300);
-  --chart-4: var(--color-secondary-300);
-  --chart-5: var(--color-primary-400);
+  --chart-1: #000000;
+  --chart-2: #404040;
+  --chart-3: #737373;
+  --chart-4: #a3a3a3;
+  --chart-5: #d4d4d4;
   --sidebar: var(--color-neutral-100);
   --sidebar-foreground: var(--color-neutral-800);
   --sidebar-primary: var(--color-primary-500);
@@ -100,28 +130,28 @@
   --font-monlam: monlam, sans-serif;
   --font-monlam-2: monlam-2, sans-serif;
   --radius: 0.5rem;
-  --shadow-2xs: 0px 4px 10px 0px hsl(240 30% 25% / 0.06);
-  --shadow-xs: 0px 4px 10px 0px hsl(240 30% 25% / 0.06);
-  --shadow-sm: 0px 4px 10px 0px hsl(240 30% 25% / 0.12),
-    0px 1px 2px -1px hsl(240 30% 25% / 0.12);
-  --shadow: 0px 4px 10px 0px hsl(240 30% 25% / 0.12),
-    0px 1px 2px -1px hsl(240 30% 25% / 0.12);
-  --shadow-md: 0px 4px 10px 0px hsl(240 30% 25% / 0.12),
-    0px 2px 4px -1px hsl(240 30% 25% / 0.12);
-  --shadow-lg: 0px 4px 10px 0px hsl(240 30% 25% / 0.12),
-    0px 4px 6px -1px hsl(240 30% 25% / 0.12);
-  --shadow-xl: 0px 4px 10px 0px hsl(240 30% 25% / 0.12),
-    0px 8px 10px -1px hsl(240 30% 25% / 0.12);
-  --shadow-2xl: 0px 4px 10px 0px hsl(240 30% 25% / 0.3);
+  --shadow-2xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.06);
+  --shadow-xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.06);
+  --shadow-sm: 0px 4px 10px 0px hsl(0 0% 0% / 0.12),
+    0px 1px 2px -1px hsl(0 0% 0% / 0.12);
+  --shadow: 0px 4px 10px 0px hsl(0 0% 0% / 0.12),
+    0px 1px 2px -1px hsl(0 0% 0% / 0.12);
+  --shadow-md: 0px 4px 10px 0px hsl(0 0% 0% / 0.12),
+    0px 2px 4px -1px hsl(0 0% 0% / 0.12);
+  --shadow-lg: 0px 4px 10px 0px hsl(0 0% 0% / 0.12),
+    0px 4px 6px -1px hsl(0 0% 0% / 0.12);
+  --shadow-xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.12),
+    0px 8px 10px -1px hsl(0 0% 0% / 0.12);
+  --shadow-2xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.3);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 }
 
 .dark {
   /* Dark mode - Optimized mappings using new design system */
-  --background: #0a0817;
+  --background: #0a0a0a;
   --foreground: var(--color-neutral-200);
-  --card: #1a1a2e;
+  --card: #171717;
   --card-foreground: var(--color-neutral-200);
   --popover: var(--color-neutral-800);
   --popover-foreground: var(--color-neutral-100);
@@ -138,11 +168,11 @@
   --border: var(--color-neutral-700);
   --input: var(--color-neutral-700);
   --ring: var(--color-primary-200);
-  --chart-1: var(--color-primary-200);
-  --chart-2: var(--color-secondary-300);
-  --chart-3: var(--color-primary-300);
-  --chart-4: var(--color-secondary-200);
-  --chart-5: var(--color-primary-100);
+  --chart-1: #ffffff;
+  --chart-2: #d4d4d4;
+  --chart-3: #a3a3a3;
+  --chart-4: #737373;
+  --chart-5: #525252;
   --sidebar: var(--color-neutral-800);
   --sidebar-foreground: var(--color-neutral-100);
   --sidebar-primary: var(--color-primary-200);
@@ -208,27 +238,31 @@
   --shadow-2xl: var(--shadow-2xl);
 
   
-  /* New Design System - Primary Colors */
-  --color-primary-50: #f1eff5;
-  --color-primary-100: #ccb4f7;
-  --color-primary-200: #a881f1;
-  --color-primary-300: #854deb;
-  --color-primary-400: #6119e6;
-  --color-primary-500: #4b14b2;
-  --color-primary-600: #360e7e;
-  --color-primary-700: #20084b;
-  --color-primary-800: #0a0317;
+  /* Primary - monochrome (black) */
+  --color-primary-50: #fafafa;
+  --color-primary-100: #f5f5f5;
+  --color-primary-200: #e5e5e5;
+  --color-primary-300: #d4d4d4;
+  --color-primary-400: #a3a3a3;
+  --color-primary-500: #262626;
+  --color-primary-600: #171717;
+  --color-primary-700: #0a0a0a;
+  --color-primary-800: #000000;
+  --color-primary-900: #000000;
+  --color-primary-950: #000000;
   
-  /* New Design System - Secondary Colors */
-  --color-secondary-50: #eff5f5;
-  --color-secondary-100: #b4f1f7;
-  --color-secondary-200: #81e8f1;
-  --color-secondary-300: #4ddeeb;
-  --color-secondary-400: #19d4e6;
-  --color-secondary-500: #14a5b2;
-  --color-secondary-600: #0e757e;
-  --color-secondary-700: #08454b;
-  --color-secondary-800: #031517;
+  /* Secondary - monochrome (gray) */
+  --color-secondary-50: #fafafa;
+  --color-secondary-100: #f5f5f5;
+  --color-secondary-200: #e5e5e5;
+  --color-secondary-300: #d4d4d4;
+  --color-secondary-400: #a3a3a3;
+  --color-secondary-500: #737373;
+  --color-secondary-600: #525252;
+  --color-secondary-700: #404040;
+  --color-secondary-800: #262626;
+  --color-secondary-900: #000000;
+  --color-secondary-950: #000000;
   
    /* New Design System - Neutral Colors */
    --color-neutral-50: #fafafa;

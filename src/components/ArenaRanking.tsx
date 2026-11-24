@@ -208,9 +208,9 @@ const ArenaRanking: React.FC<ArenaRankingProps> = () => {
 
   const getModelColor = (modelName: string) => {
     const colors: { [key: string]: string } = {
-      'gpt-4o': 'text-green-600 dark:text-green-400',
-      'gpt-4o-mini': 'text-green-500 dark:text-green-300',
-      'gpt-5': 'text-green-700 dark:text-green-500',
+      'gpt-4o': 'text-neutral-600 dark:text-neutral-300',
+      'gpt-4o-mini': 'text-neutral-600 dark:text-neutral-300',
+      'gpt-5': 'text-neutral-600 dark:text-neutral-300',
       'claude-3': 'text-purple-600 dark:text-purple-400',
       'mistral-7b': 'text-orange-600 dark:text-orange-400',
     };

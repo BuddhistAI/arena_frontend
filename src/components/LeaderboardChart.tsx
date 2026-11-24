@@ -104,15 +104,15 @@ const LeaderboardChart: React.FC<LeaderboardChartProps> = ({
   const getMetricColor = (metric: string) => {
     switch (metric) {
       case "CER":
-        return "#dc2626"; // red-600
+        return "#000000"; // black
       case "WER":
-        return "#ea580c"; // orange-600
+        return "#404040"; // neutral-700
       case "ACCURACY":
-        return "#16a34a"; // green-600
+        return "#737373"; // neutral-500
       case "BLEU":
-        return "#2563eb"; // blue-600
+        return "#a3a3a3"; // neutral-400
       default:
-        return "#6b7280"; // gray-500
+        return "#525252"; // neutral-600
     }
   };
 

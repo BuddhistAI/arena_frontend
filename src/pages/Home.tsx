@@ -183,7 +183,7 @@ const Home = () => {
                       {challenge.status === "active" ? (
                         <Link
                           to={`/submit/${challenge.id}`}
-                          className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors duration-200"
+                          className="flex-1 flex items-center justify-center px-3 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-500 transition-colors duration-200"
                         >
                           <Upload className="w-3 h-3 mr-1" />
                           Submit

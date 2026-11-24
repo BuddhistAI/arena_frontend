@@ -66,7 +66,7 @@ const ModelScoreLeaderboard: React.FC<ModelScoreLeaderboardProps> = ({ compact =
   const getProviderColor = (provider: string) => {
     const colors = {
       google: "text-blue-500 dark:text-blue-400",
-      openai: "text-green-500 dark:text-green-400",
+      openai: "text-neutral-600 dark:text-neutral-300",
       anthropic: "text-purple-500 dark:text-purple-400",
       "deepseek-v3": "text-orange-500 dark:text-orange-400",
     };
