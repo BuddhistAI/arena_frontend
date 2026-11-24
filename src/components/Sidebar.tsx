@@ -21,7 +21,6 @@ import { useAuth0 } from "../hooks/useAuth0";
 import { useTheme } from "../hooks/useTheme";
 import { useCurrentUser } from "../hooks/useUsers";
 import { useTranslation } from "react-i18next";
-import ToolsButton from "./ToolsButton";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { DEFAULT_ARENA_CHALLENGE_ID } from "../utils/const";
 
@@ -338,24 +337,12 @@ const Sidebar = ({ isOpen = false, onToggle, isMobileMenuOpen = false, onCloseMo
         </div>
       )}
       
-      {/* Bottom Section: Tools and User */}
+      {/* Bottom Section: User */}
       <div
         className={`mt-auto  border-t border-neutral-200 dark:border-neutral-700 ${
           isOpen ? "p-4" : "p-2"
         }`}
       >
-        {/* Tools Section */}
-        <div className={`${isOpen ? "mb-4" : "mb-2 flex justify-center"}`}>
-          {isOpen ? (
-              
-              <ToolsButton isSidebarOpen={isOpen}/>
-          ) : (
-            <div className="flex justify-center">
-              <ToolsButton isSidebarOpen={isOpen}/>
-            </div>
-          )}
-        </div>
-
         {isLoading && (
           /* Loading State */
           <div
