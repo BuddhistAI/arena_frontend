@@ -125,14 +125,14 @@ const Profile = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-700/40 rounded-lg">
                         <div className="flex items-center">
-                          <Trophy className="w-5 h-5 text-green-600 mr-3" />
+                          <Trophy className="w-5 h-5 text-neutral-600 dark:text-neutral-300 mr-3" />
                           <span className="font-medium text-neutral-600 dark:text-neutral-100">
                             Best Ranking
                           </span>
                         </div>
-                        <span className="text-2xl font-bold text-green-600">
+                        <span className="text-2xl font-bold text-neutral-700 dark:text-neutral-100">
                           -
                         </span>
                       </div>

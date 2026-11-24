@@ -8,28 +8,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Custom color palette from your CSS
+        // Black & white palette (mirrors src/index.css; Tailwind v4 reads the CSS, not this file)
         primary: {
-          50: '#f1eff5',
-          100: '#ccb4f7',
-          200: '#a881f1',
-          300: '#854deb',
-          400: '#6119e6',
-          500: '#4b14b2',
-          600: '#360e7e',
-          700: '#20084b',
-          800: '#0a0317',
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#262626',
+          600: '#171717',
+          700: '#0a0a0a',
+          800: '#000000',
         },
         secondary: {
-          50: '#eff5f5',
-          100: '#b4f1f7',
-          200: '#81e8f1',
-          300: '#4ddeeb',
-          400: '#19d4e6',
-          500: '#14a5b2',
-          600: '#0e757e',
-          700: '#08454b',
-          800: '#031517',
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
         },
         neutral: {
           50: '#f8fafc',

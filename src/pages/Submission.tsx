@@ -133,7 +133,7 @@ const Submission = () => {
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 dark:border-neutral-300 mx-auto"></div>
             <p className="mt-4 text-neutral-600 dark:text-neutral-400">
               Loading challenge details...
             </p>
@@ -231,14 +231,14 @@ const Submission = () => {
         </div>
 
         <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-md overflow-hidden">
-          <div className="bg-green-600 text-white px-6 py-6">
+          <div className="bg-primary-600 text-white px-6 py-6">
             <h1 className="text-2xl font-bold mb-2">
               Submit to {challenge.title || challenge.name}
             </h1>
-            <p className="text-green-100">
+            <p className="text-neutral-300">
               Upload your model's results in JSON format
             </p>
-            <div className="mt-3 text-sm text-green-100">
+            <div className="mt-3 text-sm text-neutral-300">
               <p>
                 Evaluation Metric: {challenge.evaluationMetric || "Performance"}
               </p>
@@ -454,7 +454,7 @@ const Submission = () => {
                   !description.trim() ||
                   !isAuthenticated
                 }
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-neutral-400 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors duration-200 flex items-center"
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors duration-200 flex items-center"
                 title={!isAuthenticated ? "Please login to submit" : ""}
               >
                 {submitMutation.isPending ? (

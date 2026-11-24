@@ -122,7 +122,7 @@ const Sidebar = ({ isOpen = false, onToggle, isMobileMenuOpen = false, onCloseMo
       href: undefined,
       icon: Plus,
       isActive: () => isActivePath("/admin/create-challenge"),
-      activeClasses: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-600 dark:border-green-400",
+      activeClasses: "text-primary-600 bg-primary-50 border-l-4 border-blue-600",
       tooltip: t('navigation.createChallenge'),
       isExternal: false,
     },
@@ -205,7 +205,7 @@ const Sidebar = ({ isOpen = false, onToggle, isMobileMenuOpen = false, onCloseMo
         {isOpen ? (
           <>
             <Link to="/" className="flex items-center space-x-3 flex-col">
-               <img src="/favicon.ico" alt="Buddhist AI Arena" className="w-14 h-14" />
+               <img src="/logo.png" alt="Buddhist AI Arena" className="w-14 h-14 mix-blend-multiply dark:invert dark:mix-blend-screen" />
               <span className="text-xl font-bold text-neutral-700 dark:text-neutral-100">
                 {import.meta.env.VITE_APP_NAME || "Buddhist AI Arena"}
               </span>

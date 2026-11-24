@@ -298,7 +298,7 @@ const Arena = () => {
                   className={`w-full flex items-center justify-center space-x-3 px-4 py-3 font-medium rounded-lg transition-colors duration-200 ${
                     (selectedChallenge.template_count || 0) < 2
                       ? 'bg-neutral-400 cursor-not-allowed text-neutral-200'
-                      : 'bg-green-800 hover:bg-green-700 text-white cursor-pointer'
+                      : 'bg-primary-600 hover:bg-primary-500 text-white cursor-pointer'
                   }`}
                 >
                   <Eye className="w-5 h-5" />

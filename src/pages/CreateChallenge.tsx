@@ -224,7 +224,7 @@ const CreateChallenge = () => {
               <button
                 type="button"
                 onClick={() => setShowNewCategoryForm(!showNewCategoryForm)}
-                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                className="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors flex items-center"
               >
                 <Plus className="w-4 h-4" />
               </button>

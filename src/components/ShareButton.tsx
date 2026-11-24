@@ -146,8 +146,8 @@ const ShareButton = ({
                   onClick={() => copyToClipboard(embedUrl)}
                   className="flex flex-col items-center p-3 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors group"
                 >
-                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-2 group-hover:bg-green-200 dark:group-hover:bg-green-800 transition-colors">
-                    <Copy className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <div className="w-12 h-12 bg-primary-100 dark:bg-primary-800/30 rounded-full flex items-center justify-center mb-2 group-hover:bg-primary-200 dark:group-hover:bg-primary-700/40 transition-colors">
+                    <Copy className="w-6 h-6 text-primary-600 dark:text-primary-300" />
                   </div>
                   <span className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">
                     Copy link
