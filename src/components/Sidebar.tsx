@@ -174,6 +174,13 @@ const Sidebar = ({ isOpen = false, onToggle, isMobileMenuOpen = false, onCloseMo
     }
   };
 
+  const themeOptions: Array<"light" | "dark" | "system"> = ["light", "dark", "system"];
+
+  const cycleTheme = () => {
+    const nextIndex = (themeOptions.indexOf(theme) + 1) % themeOptions.length;
+    setTheme(themeOptions[nextIndex]);
+  };
+
   const getThemeLabel = (themeOption: string) => {
     switch (themeOption) {
       case "light":
@@ -484,16 +491,7 @@ const Sidebar = ({ isOpen = false, onToggle, isMobileMenuOpen = false, onCloseMo
                   );
                 })}
                 <button
-                  onClick={() => {
-                    const themes: Array<"light" | "dark" | "system"> = [
-                      "light",
-                      "dark",
-                      "system",
-                    ];
-                    const currentIndex = themes.indexOf(theme);
-                    const nextIndex = (currentIndex + 1) % themes.length;
-                    setTheme(themes[nextIndex]);
-                  }}
+                  onClick={cycleTheme}
                   className="p-2 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-lg transition-colors duration-200"
                   title={t('sidebar.currentTheme', { theme: getThemeLabel(theme) })}
                 >
@@ -511,18 +509,53 @@ const Sidebar = ({ isOpen = false, onToggle, isMobileMenuOpen = false, onCloseMo
           </div>
         )}
         {!isLoading && !isAuthenticated && (
-          /* Sign In Button */
-          <button
-            onClick={handleLogin}
-            className={`w-full ${
-              isOpen
-                ? "px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                : "p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg"
-            } transition-colors duration-200 font-medium`}
-            title={isOpen ? "" : t('auth.signIn')}
-          >
-            {isOpen ? t('auth.signIn') : <User className="w-4 h-4" />}
-          </button>
+          /* Signed out: theme switch + Sign In button */
+          <div className={isOpen ? "space-y-3" : "space-y-1 flex flex-col items-center"}>
+            {isOpen ? (
+              <div>
+                <div className="text-xs font-medium text-neutral-500 dark:text-neutral-200 mb-1">
+                  {t('sidebar.theme')}
+                </div>
+                <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-900">
+                  {themeOptions.map((themeOption) => (
+                    <button
+                      key={themeOption}
+                      onClick={() => setTheme(themeOption)}
+                      aria-pressed={theme === themeOption}
+                      title={getThemeLabel(themeOption)}
+                      className={`flex items-center justify-center gap-1 min-w-0 px-1.5 py-1.5 text-xs rounded-md transition-colors duration-200 ${
+                        theme === themeOption
+                          ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm"
+                          : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+                      }`}
+                    >
+                      {getThemeIcon(themeOption)}
+                      <span className="truncate">{getThemeLabel(themeOption)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={cycleTheme}
+                className="p-2 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-lg transition-colors duration-200"
+                title={t('sidebar.currentTheme', { theme: getThemeLabel(theme) })}
+              >
+                {getThemeIcon(theme)}
+              </button>
+            )}
+            <button
+              onClick={handleLogin}
+              className={`w-full ${
+                isOpen
+                  ? "px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:bg-neutral-600 dark:hover:bg-neutral-500"
+                  : "p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg"
+              } transition-colors duration-200 font-medium`}
+              title={isOpen ? "" : t('auth.signIn')}
+            >
+              {isOpen ? t('auth.signIn') : <User className="w-4 h-4" />}
+            </button>
+          </div>
         )}
       </div>
     </div>
