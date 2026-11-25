@@ -132,6 +132,22 @@ export function useCreateArenaChallenge() {
   });
 }
 
+// Hook to delete a challenge (admin only)
+export function useDeleteArenaChallenge() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (challengeId: string) => arenaApi.deleteChallenge(challengeId),
+    onSuccess: (_, challengeId) => {
+      queryClient.removeQueries({ queryKey: arenaChallengeKeys.detail(challengeId) });
+      queryClient.invalidateQueries({ queryKey: arenaChallengeKeys.all });
+    },
+    onError: (error) => {
+      console.error('Error deleting arena challenge:', error);
+    },
+  });
+}
+
 // Hook to invalidate arena challenge caches
 export function useInvalidateArenaChallenges() {
   const queryClient = useQueryClient();

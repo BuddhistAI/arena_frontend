@@ -122,6 +122,20 @@ export const arenaApi = {
     
   },
 
+  // Delete a challenge (admin only) - also removes its templates, battles and ratings
+  deleteChallenge: async (challengeId: string): Promise<void> => {
+    const headers = await getAuthHeaders("json");
+    const response = await fetch(`${API_BASE_URL}/arena/challenge/${challengeId}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.detail || `HTTP error! status: ${response.status}`);
+    }
+  },
+
   // Get all the arena challenges rankings
   getAllArenaRankings: async (): Promise<ArenaRanking[]> => {
     try {
