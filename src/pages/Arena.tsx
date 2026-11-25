@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Languages, Trophy, Eye, Zap, Info } from 'lucide-react';
-import { usePaginatedArenaChallenges, useArenaCategories, useCreateArenaChallenge } from '../hooks/useArenaChallenge';
+import { Search, Plus, Languages, Trophy, Eye, Zap, Info, Trash2 } from 'lucide-react';
+import { usePaginatedArenaChallenges, useArenaCategories, useCreateArenaChallenge, useDeleteArenaChallenge } from '../hooks/useArenaChallenge';
+import { useCurrentUser } from '../hooks/useUsers';
 import { LANGUAGES } from '../utils/const';
 import type { ArenaChallenge, ArenaChallengeRequest } from '../types/arena_challenge';
 import Pagination from './Pagination';
@@ -21,6 +22,10 @@ const Arena = () => {
   // Modal states
   const [selectedChallenge, setSelectedChallenge] = useState<ArenaChallenge | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [challengeToDelete, setChallengeToDelete] = useState<ArenaChallenge | null>(null);
+
+  const { data: currentUserData } = useCurrentUser();
+  const isAdmin = currentUserData?.data?.role === 'admin';
   
   // Create challenge form state
   const [createForm, setCreateForm] = useState<ArenaChallengeRequest>({
@@ -50,6 +55,7 @@ const Arena = () => {
   } = useArenaCategories();
 
   const createChallengeMutation = useCreateArenaChallenge();
+  const deleteChallengeMutation = useDeleteArenaChallenge();
 
   // Extract data from challenges response
   const challenges = challengesData?.items || [];
@@ -76,6 +82,25 @@ const Arena = () => {
     } catch (error) {
       console.error('Failed to create arena:', error);
     }
+  };
+
+  const handleDeleteChallenge = async () => {
+    if (!challengeToDelete) return;
+    try {
+      await deleteChallengeMutation.mutateAsync(challengeToDelete.id);
+      // If this was the last arena on the page, step back a page
+      if (challenges.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
+      setChallengeToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete arena:', error);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setChallengeToDelete(null);
+    deleteChallengeMutation.reset();
   };
 
   const clearFilters = () => {
@@ -213,7 +238,23 @@ const Arena = () => {
                       {challenge.from_language} → {challenge.to_language}
                     </span>
                   </div>
-                  <Trophy className="w-5 h-5 text-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setChallengeToDelete(challenge);
+                        }}
+                        title="Delete arena"
+                        aria-label={`Delete arena ${challenge.challenge_name}`}
+                        className="p-1 rounded-md text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
@@ -331,6 +372,53 @@ const Arena = () => {
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-neutral-900 dark:border-t-neutral-100"></div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Challenge Confirmation Modal (admin only) */}
+      {isAdmin && challengeToDelete && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/40">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                Delete arena?
+              </h2>
+            </div>
+
+            <p className="text-neutral-700 dark:text-neutral-300 mb-2">
+              <span className="font-semibold">{challengeToDelete.challenge_name}</span>
+              {' '}({challengeToDelete.from_language} → {challengeToDelete.to_language}) will be permanently deleted.
+            </p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              Its {challengeToDelete.template_count || 0} template(s), all battle votes and its rankings will be deleted too. This cannot be undone.
+            </p>
+
+            {deleteChallengeMutation.isError && (
+              <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+                Failed to delete: {(deleteChallengeMutation.error as Error).message}
+              </p>
+            )}
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={closeDeleteModal}
+                disabled={deleteChallengeMutation.isPending}
+                className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 font-medium rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteChallenge}
+                disabled={deleteChallengeMutation.isPending}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-neutral-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+              >
+                {deleteChallengeMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
