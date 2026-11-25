@@ -135,7 +135,7 @@ const App = () => {
                   } ml-0 h-screen flex flex-col`}
                 >
                   {/* Main Content */}
-                  <main className="flex-1  relative overflow-auto pt-16 lg:pt-0 bg-neutral-200 dark:bg-neutral-900">
+                  <main className="flex-1  relative overflow-auto pt-16 lg:pt-0 bg-background">
                     <Routes>
                       <Route
                         path="/login"
