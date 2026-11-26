@@ -50,13 +50,7 @@
     "totalScore": "ལྷག་བསམ་ཚང་མ།",
     "voters": "འདེམས་མཁན།",
     "model": "གཞི་རིམ།",
-    "actions": "བྱ་བ།",
-    "metrics": {
-      "CER": "CER",
-      "WER": "WER",
-      "BLEU": "BLEU",
-      "ACCURACY": "གནད་འགག"
-    }
+    "actions": "བྱ་བ།"
   },
   "arena": {
     "title": "རྩེད་གནས།",

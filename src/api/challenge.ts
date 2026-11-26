@@ -6,15 +6,12 @@ import type {
   SubmissionCreatedResponse,
   SubmissionResponse,
   SubmissionDetailView,
-  LeaderboardResult,
-  LeaderboardEntry,
   LeaderboardFilter,
   RankedLeaderboard,
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
   ApiResponse,
-  PaginatedResponse,
   Scorer,
   ChallengeDataError,
 } from "../types/challenge";
@@ -263,112 +260,6 @@ export const challengeApi = {
       );
     }
     return response.json();
-  },
-
-  // Legacy: groups `result` rows in the browser. Only the all-Challenges
-  // overview and the embed still read it; the Leaderboard page uses
-  // getRankedLeaderboard.
-  getLeaderboard: async (
-    challengeId: string,
-    page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResponse<LeaderboardEntry>> => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/results/challenge/${challengeId}`,
-        {
-          headers: {
-            accept: "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const challengeResults: LeaderboardResult[] = await response.json();
-
-      // Group results by submission_id
-      const submissionGroups: { [key: string]: LeaderboardResult[] } = {};
-      challengeResults.forEach((result) => {
-        const submissionId = result.submission_id;
-        if (!submissionGroups[submissionId]) {
-          submissionGroups[submissionId] = [];
-        }
-        submissionGroups[submissionId].push(result);
-      });
-
-      // Convert to LeaderboardEntry format
-      const leaderboardEntries: LeaderboardEntry[] = Object.values(
-        submissionGroups
-      ).map((results) => {
-        const firstResult = results[0];
-        const submission = firstResult.submission;
-
-        // Aggregate metrics for this submission
-        const metrics: { [key: string]: number } = {};
-        results.forEach((result) => {
-          metrics[result.type] = result.score;
-        });
-
-        return {
-          submission_id: submission.id,
-          model_name: submission.model.name,
-          user_id: submission.user_id,
-          description: submission.description,
-          created_at: submission.created_at,
-          metrics,
-        };
-      });
-
-      // Sort by primary metric (CER if available, otherwise first metric)
-      const sortedEntries = [...leaderboardEntries].sort(
-        (a: LeaderboardEntry, b: LeaderboardEntry) => {
-          const aScore =
-            a.metrics.CER ?? a.metrics[Object.keys(a.metrics)[0]] ?? Infinity;
-          const bScore =
-            b.metrics.CER ?? b.metrics[Object.keys(b.metrics)[0]] ?? Infinity;
-          return aScore - bScore; // Lower is better for CER
-        }
-      );
-
-      // Add rank
-      sortedEntries.forEach((entry: LeaderboardEntry, index: number) => {
-        entry.rank = index + 1;
-      });
-
-      // Paginate
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedData = sortedEntries.slice(startIndex, endIndex);
-
-      return {
-        data: paginatedData,
-        pagination: {
-          page,
-          limit,
-          total: sortedEntries.length,
-          totalPages: Math.ceil(sortedEntries.length / limit),
-        },
-        message: "Leaderboard fetched successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-      // Fallback to empty result
-      return {
-        data: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0,
-        },
-        message: "Failed to fetch leaderboard",
-        success: false,
-      };
-    }
   },
 
   // Submit to a challenge; resolves once accepted (202, pending)
@@ -717,55 +608,6 @@ export const challengeApi = {
     }
     const submission: UserSubmission = await response.json();
     return { data: submission, message: "Resync queued", success: true };
-  },
-
-  // Get leaderboard results (deprecated - use individual challenge endpoints)
-  getLeaderboardResults: async (): Promise<
-    ApiResponse<LeaderboardResult[]>
-  > => {
-    try {
-      const headers = await getAuthHeaders();
-
-      const response = await fetch(`${API_BASE_URL}/results/leaderboard`, {
-        method: "GET",
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const results = await response.json();
-
-      return {
-        data: results,
-        message: "Leaderboard results fetched successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error fetching leaderboard results:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch leaderboard results"
-      );
-    }
-  },
-
-  // Get all leaderboard data and process it for display (deprecated - use individual challenge endpoints)
-  getAllLeaderboards: async (): Promise<
-    ApiResponse<{ [challengeId: string]: LeaderboardEntry[] }>
-  > => {
-    console.warn(
-      "getAllLeaderboards is deprecated. Use individual challenge endpoints via useAllLeaderboards hook instead."
-    );
-
-    // Return empty data to avoid breaking existing code
-    return {
-      data: {},
-      message: "Function deprecated - use individual challenge endpoints",
-      success: false,
-    };
   },
 
   // Update challenge
