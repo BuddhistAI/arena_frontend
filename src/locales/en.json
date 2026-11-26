@@ -365,6 +365,16 @@
     },
     "headlineMetric": "Headline Metric",
     "details": "Details",
-    "scoringFailed": "Scoring failed"
+    "scoringFailed": "Scoring failed",
+    "repoFolder": "View in the Challenge Repo",
+    "sync": {
+      "pending": "Publishing",
+      "synced": "Published",
+      "failed": "Publishing failed"
+    },
+    "syncPanelTitle": "Submissions in the Challenge Repo",
+    "syncPanelEmpty": "No scored Submissions yet.",
+    "resync": "Resync",
+    "resyncFailed": "Resync failed"
   }
 }

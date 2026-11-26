@@ -23,6 +23,7 @@ import { useCurrentUser } from "../hooks/useUsers";
 import ShareButton from "../components/ShareButton";
 import LeaderboardChart from "../components/LeaderboardChart";
 import { useToast } from "../components/use-toast";
+import SubmissionSyncPanel from "../components/SubmissionSyncPanel";
 import MattricHelper from "../components/MattricHelper";
 
 const getRankIcon = (rank: number) => {
@@ -516,7 +517,7 @@ const Leaderboard = () => {
           )}
         </div>
 
-   
+        {isAdmin && <SubmissionSyncPanel challenge={challenge} />}
       </div>
     </div>
   );

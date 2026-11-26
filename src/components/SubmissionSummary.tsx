@@ -1,8 +1,18 @@
-import { CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle,
+  ExternalLink,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import JsonViewer from "./JsonViewer";
 import { formatMetric } from "../lib/utils";
-import type { SubmissionStatus, UserSubmission } from "../types/challenge";
+import type {
+  SubmissionStatus,
+  SyncStatus,
+  UserSubmission,
+} from "../types/challenge";
 
 const BADGE_STYLES: Record<SubmissionStatus, string> = {
   completed:
@@ -30,6 +40,52 @@ export const SubmissionStatusBadge = ({ status }: { status: SubmissionStatus }) 
       <Icon className="w-3 h-3 mr-1" />
       {t(`submission.status.${status}`)}
     </span>
+  );
+};
+
+const SYNC_BADGE_STYLES: Record<SyncStatus, string> = {
+  synced: BADGE_STYLES.completed,
+  pending: BADGE_STYLES.pending,
+  failed: BADGE_STYLES.failed,
+};
+
+export const SyncStatusBadge = ({ status }: { status: SyncStatus }) => {
+  const { t } = useTranslation();
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SYNC_BADGE_STYLES[status]}`}
+    >
+      {t(`submission.sync.${status}`)}
+    </span>
+  );
+};
+
+// GitHub resolves HEAD to the repo's default branch.
+const repoFolderUrl = (repoUrl: string, repoPath: string) =>
+  `${repoUrl}/tree/HEAD/${repoPath}`;
+
+// A link to the Submission's folder in the Challenge Repo, once it is synced.
+export const SubmissionRepoLink = ({
+  submission,
+  repoUrl,
+}: {
+  submission: UserSubmission;
+  repoUrl?: string;
+}) => {
+  const { t } = useTranslation();
+  if (!repoUrl || submission.sync_status !== "synced" || !submission.repo_path) {
+    return null;
+  }
+  return (
+    <a
+      href={repoFolderUrl(repoUrl, submission.repo_path)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+    >
+      <ExternalLink className="w-4 h-4 mr-1" />
+      {t("submission.repoFolder")}
+    </a>
   );
 };
 

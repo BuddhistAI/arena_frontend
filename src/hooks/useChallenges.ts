@@ -79,8 +79,16 @@ const SCORING_POLL_INTERVAL_MS = 3000;
 const isBeingScored = (submission: UserSubmission) =>
   submission.status === "pending" || submission.status === "processing";
 
+// Scored, and its folder not yet in the Challenge Repo.
+const isBeingPublished = (submission: UserSubmission) =>
+  submission.status === "completed" && submission.sync_status === "pending";
+
+const isInProgress = (submission: UserSubmission) =>
+  isBeingScored(submission) || isBeingPublished(submission);
+
 // Hook for fetching current user's submissions. While any of them is still
-// being scored it refetches every few seconds, so statuses update in place.
+// being scored or published it refetches every few seconds, so statuses and
+// repo links update in place.
 export const useUserSubmissions = ({ enabled = true } = {}) => {
   return useQuery({
     queryKey: userSubmissionsKey,
@@ -89,7 +97,40 @@ export const useUserSubmissions = ({ enabled = true } = {}) => {
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: (query) =>
-      query.state.data?.data.some(isBeingScored) ? SCORING_POLL_INTERVAL_MS : false,
+      query.state.data?.data.some(isInProgress) ? SCORING_POLL_INTERVAL_MS : false,
+  });
+};
+
+const challengeSubmissionsKey = (challengeId: string) =>
+  ["challengeSubmissions", challengeId] as const;
+
+// Every Submission to a Challenge (admin sync view), polled like
+// useUserSubmissions while any is being scored or published.
+export const useChallengeSubmissions = (
+  challengeId: string,
+  { enabled = true } = {}
+) => {
+  return useQuery({
+    queryKey: challengeSubmissionsKey(challengeId),
+    queryFn: () => challengeApi.getChallengeSubmissions(challengeId),
+    enabled: enabled && !!challengeId,
+    refetchInterval: (query) =>
+      query.state.data?.data.some(isInProgress) ? SCORING_POLL_INTERVAL_MS : false,
+  });
+};
+
+export const useResyncSubmission = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (submission: UserSubmission) =>
+      challengeApi.resyncSubmission(submission.id),
+    onSuccess: (_, submission) => {
+      queryClient.invalidateQueries({
+        queryKey: challengeSubmissionsKey(submission.challenge_id),
+      });
+      queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+    },
   });
 };
 

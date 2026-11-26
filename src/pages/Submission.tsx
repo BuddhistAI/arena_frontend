@@ -11,6 +11,7 @@ import { useAuth } from "../auth/use-auth-hook";
 import { useTranslation } from "react-i18next";
 import { SubmissionCreateError } from "../api/challenge";
 import {
+  SubmissionRepoLink,
   SubmissionScore,
   SubmissionStatusBadge,
 } from "../components/SubmissionSummary";
@@ -565,6 +566,10 @@ const Submission = () => {
                       </span>
                     </div>
                     <SubmissionScore submission={submission} />
+                    <SubmissionRepoLink
+                      submission={submission}
+                      repoUrl={challenge?.repo_url}
+                    />
                   </li>
                 ))}
               </ul>

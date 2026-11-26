@@ -598,6 +598,43 @@ export const challengeApi = {
     }
   },
 
+  // Every Submission to one Challenge, for the admin sync view
+  getChallengeSubmissions: async (
+    challengeId: string
+  ): Promise<ApiResponse<UserSubmission[]>> => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/submissions`, { headers });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch submissions (status ${response.status})`);
+    }
+    const submissions: UserSubmission[] = await response.json();
+    return {
+      data: submissions.filter((s) => s.challenge_id === challengeId),
+      message: "Challenge submissions fetched successfully",
+      success: true,
+    };
+  },
+
+  // Resync a Submission's repo folder (admin only); answers it `pending`
+  resyncSubmission: async (
+    submissionId: string
+  ): Promise<ApiResponse<UserSubmission>> => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_BASE_URL}/submissions/${submissionId}/resync`,
+      { method: "POST", headers }
+    );
+    if (!response.ok) {
+      const { message } = await parseValidationFailure(
+        response,
+        `Failed to resync submission (status ${response.status})`
+      );
+      throw new Error(message);
+    }
+    const submission: UserSubmission = await response.json();
+    return { data: submission, message: "Resync queued", success: true };
+  },
+
   // Get leaderboard results (deprecated - use individual challenge endpoints)
   getLeaderboardResults: async (): Promise<
     ApiResponse<LeaderboardResult[]>
