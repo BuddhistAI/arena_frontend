@@ -50,15 +50,11 @@ export const useChallenge = (id: string) => {
   });
 };
 
-// Hooks for leaderboards
-export const useLeaderboard = (
-  challengeId: string,
-  page: number = 1,
-  limit: number = 10
-) => {
+// Hooks for leaderboards: one page of a Challenge's server-ranked Leaderboard
+export const useLeaderboard = (challengeId: string, page: number = 1) => {
   return useQuery({
     queryKey: challengeKeys.leaderboard(challengeId, page),
-    queryFn: () => challengeApi.getLeaderboard(challengeId, page, limit),
+    queryFn: () => challengeApi.getRankedLeaderboard(challengeId, page),
     enabled: !!challengeId,
     staleTime: 2 * 60 * 1000, // 2 minutes - leaderboards update more frequently
     gcTime: 5 * 60 * 1000,
@@ -236,7 +232,7 @@ export const usePrefetchLeaderboard = () => {
   return (challengeId: string) => {
     queryClient.prefetchQuery({
       queryKey: challengeKeys.leaderboard(challengeId, 1),
-      queryFn: () => challengeApi.getLeaderboard(challengeId, 1, 10),
+      queryFn: () => challengeApi.getRankedLeaderboard(challengeId, 1),
       staleTime: 2 * 60 * 1000,
     });
   };

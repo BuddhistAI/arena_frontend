@@ -7,6 +7,7 @@ import type {
   SubmissionResponse,
   LeaderboardResult,
   LeaderboardEntry,
+  RankedLeaderboard,
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
@@ -220,7 +221,30 @@ export const challengeApi = {
     }
   },
 
-  // Get leaderboard for a challenge using the new endpoint
+  // One page of a Challenge's Leaderboard, ranked on the server.
+  getRankedLeaderboard: async (
+    challengeId: string,
+    page: number = 1,
+    limit: number = 25
+  ): Promise<RankedLeaderboard> => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const response = await fetch(
+      `${API_BASE_URL}/challenges/${challengeId}/leaderboard?${params}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!response.ok) {
+      throw new Error(
+        response.status === 404
+          ? "Challenge not found"
+          : `HTTP error! status: ${response.status}`
+      );
+    }
+    return response.json();
+  },
+
+  // Legacy: groups `result` rows in the browser. Only the all-Challenges
+  // overview and the embed still read it; the Leaderboard page uses
+  // getRankedLeaderboard.
   getLeaderboard: async (
     challengeId: string,
     page: number = 1,

@@ -164,6 +164,35 @@ export interface Scorer {
   };
 }
 
+// GET /challenges/{id}/leaderboard: one page of a Challenge's Leaderboard,
+// ranked on the server. A row's `rank` is its place on the whole Leaderboard.
+export interface LeaderboardScorer {
+  name: string;
+  label: string;
+  direction: ScorerDirection;
+  format: MetricFormat;
+  public_summary: PublicSummaryEntry[];
+}
+
+export interface LeaderboardRow {
+  submission_id: string;
+  rank: number;
+  type: SubmissionType;
+  name: string;
+  submitter: string;
+  created_at: string;
+  headline_metric: number;
+  preferred_model: string | null;
+  has_download: boolean;
+}
+
+export interface RankedLeaderboard {
+  scorer: LeaderboardScorer;
+  page: number;
+  limit: number;
+  rows: LeaderboardRow[];
+}
+
 // One problem the backend found in uploaded Challenge or Submission data
 // (422 `errors`).
 export interface ChallengeDataError {
