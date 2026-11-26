@@ -1,4 +1,4 @@
-import type { MetricFormat } from "../utils/formatMetric";
+import type { DisplayFormat } from "../utils/formatMetric";
 
 export interface Category {
   id: string;
@@ -174,7 +174,7 @@ export interface ScorerParameter {
 export interface PublicSummaryEntry {
   key: string;
   label: string;
-  format: MetricFormat;
+  format: DisplayFormat;
 }
 
 // A Public Summary entry of a scored Submission, with its value.
@@ -186,7 +186,7 @@ export interface Scorer {
   name: string;
   label: string;
   direction: ScorerDirection;
-  display_format: MetricFormat;
+  display_format: DisplayFormat;
   public_summary: PublicSummaryEntry[];
   parameter_schema: {
     type?: "object";
@@ -200,7 +200,7 @@ export interface LeaderboardScorer {
   name: string;
   label: string;
   direction: ScorerDirection;
-  format: MetricFormat;
+  display_format: DisplayFormat;
   public_summary: PublicSummaryEntry[];
 }
 

@@ -330,7 +330,7 @@ const Leaderboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-neutral-700 dark:text-neutral-100">
-                          {formatMetric(row.headline_metric, scorer.format)}
+                          {formatMetric(row.headline_metric, scorer.display_format)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

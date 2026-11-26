@@ -145,7 +145,7 @@ const HeadlineMetric = ({ submission }: { submission: SubmissionDetailView }) =>
         <div>
           <dt className="text-sm text-neutral-500 dark:text-neutral-400">{scorer.label}</dt>
           <dd className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
-            {formatMetric(submission.headline_metric, scorer.format)}
+            {formatMetric(submission.headline_metric, scorer.display_format)}
           </dd>
         </div>
         {(submission.public_summary ?? []).map((entry) => (

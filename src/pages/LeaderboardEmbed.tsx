@@ -226,7 +226,7 @@ const LeaderboardEmbed = () => {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-100">
-                          {formatMetric(row.headline_metric, scorer.format)}
+                          {formatMetric(row.headline_metric, scorer.display_format)}
                         </div>
                       </td>
                     </tr>
