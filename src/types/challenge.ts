@@ -99,6 +99,8 @@ export interface SubmissionDetailView {
   repo_url: string | null;
   // Prompt only: the prompt's text.
   prompt_text: string | null;
+  // Prompt and Skill: where to download it, relative to the API root; null for a Model.
+  download_url: string | null;
 }
 
 // Legacy submission interface (keeping for compatibility)

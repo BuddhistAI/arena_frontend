@@ -396,6 +396,7 @@
     "syncPanelTitle": "All Submissions (admin)",
     "syncPanelEmpty": "No Submissions yet.",
     "resync": "Resync",
+    "download": "Download",
     "resyncFailed": "Resync failed",
     "delete": "Delete",
     "deleting": "Deleting...",
