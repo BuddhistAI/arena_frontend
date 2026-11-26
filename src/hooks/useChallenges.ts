@@ -74,6 +74,7 @@ export const useSubmission = (id: string) => {
 };
 
 const userSubmissionsKey = ["userSubmissions"] as const;
+const preferredModelsKey = ["preferredModels"] as const;
 const SCORING_POLL_INTERVAL_MS = 3000;
 
 const isBeingScored = (submission: UserSubmission) =>
@@ -107,6 +108,7 @@ export const useSubmitToChallenge = () => {
       });
 
       queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+      queryClient.invalidateQueries({ queryKey: preferredModelsKey });
 
       // Update challenge data (increment submission count)
       queryClient.invalidateQueries({
@@ -213,6 +215,16 @@ export const useScorers = () => {
     queryKey: ["scorers"],
     queryFn: challengeApi.getScorers,
     staleTime: 60 * 60 * 1000, // the registry only changes with a backend release
+  });
+};
+
+// Preferred Model ids already used on the platform, offered as autocomplete
+export const usePreferredModels = ({ enabled = true } = {}) => {
+  return useQuery({
+    queryKey: preferredModelsKey,
+    queryFn: challengeApi.getPreferredModels,
+    enabled,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

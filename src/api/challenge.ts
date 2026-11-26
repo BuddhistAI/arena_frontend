@@ -467,6 +467,16 @@ export const challengeApi = {
     return response.json();
   },
 
+  // Preferred Model ids already used on Submissions, sorted
+  getPreferredModels: async (): Promise<string[]> => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/submissions/preferred-models`, { headers });
+    if (!response.ok) {
+      throw new Error(`Failed to load preferred models (status ${response.status})`);
+    }
+    return response.json();
+  },
+
   // Create new challenge
   createChallenge: async (
     challengeData: ChallengeCreateRequest

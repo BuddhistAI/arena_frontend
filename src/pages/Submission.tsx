@@ -4,6 +4,7 @@ import { useToast } from "../components/use-toast";
 import { ArrowLeft, Upload, CheckCircle, AlertCircle, Info, X } from "lucide-react";
 import {
   useChallenge,
+  usePreferredModels,
   useSubmitToChallenge,
   useUserSubmissions,
 } from "../hooks/useChallenges";
@@ -137,6 +138,9 @@ const Submission = () => {
   const [license, setLicense] = useState<SubmissionLicense>(DEFAULT_LICENSE);
   const [dragActive, setDragActive] = useState(false);
   const isPrompt = submissionType === "prompt";
+  const { data: preferredModelSuggestions = [] } = usePreferredModels({
+    enabled: isPrompt,
+  });
   const [submissionError, setSubmissionError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ChallengeDataError[]>([]);
   const [limitResetAt, setLimitResetAt] = useState<Date | null>(null);
@@ -572,12 +576,19 @@ const Submission = () => {
                   <input
                     type="text"
                     id="preferredModel"
+                    list="preferredModelSuggestions"
+                    autoComplete="off"
                     value={preferredModel}
                     onChange={(e) => withClear(setPreferredModel)(e.target.value)}
                     className={inputClass}
                     placeholder={t("submission.preferredModelPlaceholder")}
                     required
                   />
+                  <datalist id="preferredModelSuggestions">
+                    {preferredModelSuggestions.map((modelId) => (
+                      <option key={modelId} value={modelId} />
+                    ))}
+                  </datalist>
                   <p className={hintClass}>{t("submission.preferredModelHint")}</p>
                   <FieldErrors errors={errorsFor("preferred_model")} />
                 </div>
