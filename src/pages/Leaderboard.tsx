@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -22,9 +22,11 @@ import { useCurrentUser } from "../hooks/useUsers";
 import ShareButton from "../components/ShareButton";
 import HeadlineMetricChart from "../components/HeadlineMetricChart";
 import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
+import LeaderboardFilters from "../components/LeaderboardFilters";
 import { useToast } from "../components/use-toast";
 import SubmissionSyncPanel from "../components/SubmissionSyncPanel";
 import { formatMetric } from "../utils/formatMetric";
+import type { LeaderboardFilter } from "../types/challenge";
 
 const getRankIcon = (rank: number) => {
   switch (rank) {
@@ -48,6 +50,11 @@ const Leaderboard = () => {
   const { challengeId } = useParams<{ challengeId: string }>();
   const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<LeaderboardFilter>({});
+  const changeFilter = useCallback((next: LeaderboardFilter) => {
+    setFilter(next);
+    setPage(1);
+  }, []);
   const { data: currentUserData } = useCurrentUser();
   const deleteSubmissionMutation = useDeleteSubmission();
   const { success } = useToast();
@@ -56,7 +63,7 @@ const Leaderboard = () => {
     data: leaderboard,
     isLoading: leaderboardLoading,
     error: leaderboardError,
-  } = useLeaderboard(challengeId || "", page);
+  } = useLeaderboard(challengeId || "", page, filter);
 
   const {
     data: challengeResponse,
@@ -67,6 +74,7 @@ const Leaderboard = () => {
   const challenge = challengeResponse?.data;
   const rows = leaderboard?.rows || [];
   const scorer = leaderboard?.scorer;
+  const counts = leaderboard?.counts;
   // Without counts a full page is the only sign that another may follow.
   const hasNextPage = !!leaderboard && rows.length === leaderboard.limit;
   const user = currentUserData?.data;
@@ -231,7 +239,17 @@ const Leaderboard = () => {
         {/* Leaderboard */}
         <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg shadow-md overflow-hidden">
           
-          {rows.length === 0 && page === 1 && (
+          {counts && counts.all > 0 && (
+            <LeaderboardFilters counts={counts} filter={filter} onChange={changeFilter} />
+          )}
+
+          {counts && counts.all > 0 && rows.length === 0 && page === 1 && (
+            <p className="text-center py-12 text-neutral-600 dark:text-neutral-400">
+              No submissions match.
+            </p>
+          )}
+
+          {counts?.all === 0 && (
             <div className="text-center py-12">
               <Trophy className="w-16 h-16 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-neutral-600 dark:text-neutral-100 mb-2">
