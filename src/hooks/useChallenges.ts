@@ -199,6 +199,15 @@ export const useCategories = () => {
   });
 };
 
+// Scorers a Challenge can be locked to (from buddhist-eval via the backend)
+export const useScorers = () => {
+  return useQuery({
+    queryKey: ["scorers"],
+    queryFn: challengeApi.getScorers,
+    staleTime: 60 * 60 * 1000, // the registry only changes with a backend release
+  });
+};
+
 // Admin challenge creation hooks
 export const useCreateChallenge = () => {
   const queryClient = useQueryClient();
@@ -206,6 +215,9 @@ export const useCreateChallenge = () => {
   return useMutation({
     mutationFn: (challengeData: ChallengeCreateRequest) =>
       challengeApi.createChallenge(challengeData),
+    // A rejected create (422/409) won't pass on retry, and retrying re-uploads
+    // every file, so never retry.
+    retry: false,
     onSuccess: () => {
       // Invalidate challenges list to show new challenge
       queryClient.invalidateQueries({

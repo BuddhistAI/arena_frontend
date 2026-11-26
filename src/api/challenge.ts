@@ -11,12 +11,61 @@ import type {
   CategoryCreateRequest,
   ApiResponse,
   PaginatedResponse,
+  Scorer,
+  ChallengeDataError,
 } from "../types/challenge";
 import { getAuthHeaders, setAuthTokenGetter } from "../lib/auth";
 
 // API Base URL
 const API_BASE_URL =
   import.meta.env.VITE_SERVER_URL || "https://eval-api.pecha.tools";
+
+// A failed create: `message` is the summary, `errors` lists each problem
+// in the uploaded data when the backend reports them (422).
+export class ChallengeCreateError extends Error {
+  errors: ChallengeDataError[];
+
+  constructor(message: string, errors: ChallengeDataError[] = []) {
+    super(message);
+    this.name = "ChallengeCreateError";
+    this.errors = errors;
+  }
+}
+
+const challengeCreateError = async (
+  response: Response
+): Promise<ChallengeCreateError> => {
+  const fallback = `Failed to create challenge (status ${response.status})`;
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return new ChallengeCreateError(fallback);
+  }
+  const data = body as { detail?: unknown; errors?: unknown };
+
+  // Our validator: {"detail": "...", "errors": [{field, message, line, id}]}
+  if (Array.isArray(data.errors)) {
+    return new ChallengeCreateError(
+      typeof data.detail === "string" ? data.detail : fallback,
+      data.errors as ChallengeDataError[]
+    );
+  }
+  // FastAPI's own validation: {"detail": [{loc, msg}]}
+  if (Array.isArray(data.detail)) {
+    const errors = (data.detail as { loc?: unknown[]; msg?: string }[]).map(
+      (item) => ({
+        field: String(item.loc?.[item.loc.length - 1] ?? "request"),
+        message: item.msg ?? "Invalid value",
+      })
+    );
+    return new ChallengeCreateError("Some fields are missing or invalid.", errors);
+  }
+  if (typeof data.detail === "string") {
+    return new ChallengeCreateError(data.detail);
+  }
+  return new ChallengeCreateError(fallback);
+};
 
 // Export the centralized auth token setter for backward compatibility
 export { setAuthTokenGetter };
@@ -352,64 +401,59 @@ export const challengeApi = {
     }
   },
 
+  // List the Scorers a Challenge can be locked to
+  getScorers: async (): Promise<Scorer[]> => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/scorers`, { headers });
+    if (!response.ok) {
+      throw new Error(`Failed to load scorers (status ${response.status})`);
+    }
+    return response.json();
+  },
+
   // Create new challenge
   createChallenge: async (
     challengeData: ChallengeCreateRequest
   ): Promise<ApiResponse<Challenge>> => {
+    const formData = new FormData();
+    formData.append("title", challengeData.title);
+    formData.append("category_id", challengeData.category_id);
+    formData.append("image_uri", challengeData.image_uri);
+    formData.append("description", challengeData.description);
+    formData.append("status", challengeData.status);
+    formData.append("scorer_name", challengeData.scorer_name);
+    formData.append("scorer_params", JSON.stringify(challengeData.scorer_params));
+    formData.append("inputs_file", challengeData.inputs_file);
+    formData.append("ground_truth_file", challengeData.ground_truth_file);
+    if (challengeData.media_archive_file) {
+      formData.append("media_archive_file", challengeData.media_archive_file);
+    }
+
+    // Get headers without Content-Type (let browser set it for FormData)
+    const headers = await getAuthHeaders("none");
+
+    let response: Response;
     try {
-      const formData = new FormData();
-
-      // Add all fields to FormData
-      formData.append("title", challengeData.title);
-      formData.append("category_id", challengeData.category_id);
-      formData.append("image_uri", challengeData.image_uri);
-      formData.append("description", challengeData.description);
-      formData.append("status", challengeData.status);
-
-      // Add ground truth file if provided
-      if (challengeData.ground_truth_file) {
-        formData.append("ground_truth_file", challengeData.ground_truth_file);
-      }
-
-      // Get headers without Content-Type (let browser set it for FormData)
-      const headers = await getAuthHeaders("none");
-
-      const response = await fetch(`${API_BASE_URL}/challenges/create`, {
+      response = await fetch(`${API_BASE_URL}/challenges/create`, {
         method: "POST",
         headers,
         body: formData,
       });
-
-      if (!response.ok) {
-        // Try to parse error response body for detailed error message
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.detail && typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail;
-          } else if (errorData.message && typeof errorData.message === 'string') {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          // If parsing fails, keep the generic error message
-          console.warn("Failed to parse error response:", parseError);
-        }
-        throw new Error(errorMessage);
-      }
-
-      const newChallenge: Challenge = await response.json();
-
-      return {
-        data: newChallenge,
-        message: "Challenge created successfully",
-        success: true,
-      };
     } catch (error) {
       console.error("Error creating challenge:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to create challenge"
-      );
+      throw new Error("Could not reach the server to create the challenge");
     }
+
+    if (!response.ok) {
+      throw await challengeCreateError(response);
+    }
+
+    const newChallenge: Challenge = await response.json();
+    return {
+      data: newChallenge,
+      message: "Challenge created successfully",
+      success: true,
+    };
   },
 
   // Get all submissions
