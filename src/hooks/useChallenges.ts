@@ -193,58 +193,6 @@ export const usePrefetchChallenge = () => {
   };
 };
 
-// Hook to fetch leaderboard data for all challenges
-export const useAllLeaderboards = (
-  challenges: Array<{
-    id: string;
-    title?: string;
-    name?: string;
-    category?: { name?: string };
-    status?: string;
-  }> = []
-) => {
-  return useQuery({
-    queryKey: [...challengeKeys.leaderboards(), "all"],
-    queryFn: async () => {
-      const leaderboardPromises = challenges.map(async (challenge) => {
-        try {
-          const response = await challengeApi.getLeaderboard(
-            challenge.id,
-            1,
-            5
-          ); // Get top 5 for each
-          return {
-            challengeId: challenge.id,
-            challengeTitle: challenge.title || challenge.name,
-            challengeCategory: challenge.category?.name || "Unknown",
-            challengeStatus: challenge.status,
-            submissions: response.data,
-            totalSubmissions: response.pagination?.total || 0,
-          };
-        } catch (error) {
-          console.error(
-            `Failed to fetch leaderboard for ${challenge.id}:`,
-            error
-          );
-          return {
-            challengeId: challenge.id,
-            challengeTitle: challenge.title || challenge.name,
-            challengeCategory: challenge.category?.name || "Unknown",
-            challengeStatus: challenge.status,
-            submissions: [],
-            totalSubmissions: 0,
-          };
-        }
-      });
-
-      return Promise.all(leaderboardPromises);
-    },
-    enabled: challenges.length > 0,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-};
-
 // Helper hook to prefetch leaderboard
 export const usePrefetchLeaderboard = () => {
   const queryClient = useQueryClient();
@@ -382,28 +330,10 @@ export const useDeleteSubmission = () => {
       queryClient.invalidateQueries({
         queryKey: challengeKeys.leaderboards(),
       });
-
-      // Force refetch of combined leaderboards
-      queryClient.refetchQueries({
-        queryKey: [...challengeKeys.leaderboards(), "all"],
-      });
     },
     onError: (error) => {
       console.error("Submission deletion failed:", error);
     },
-  });
-};
-
-// Deprecated: Use individual challenge leaderboard hooks instead
-export const useLeaderboardResults = () => {
-  console.warn(
-    "useLeaderboardResults is deprecated. Use useLeaderboard(challengeId) instead."
-  );
-  return useQuery({
-    queryKey: ["results", "leaderboard", "deprecated"],
-    queryFn: () =>
-      Promise.resolve({ data: [], message: "Deprecated", success: false }),
-    enabled: false, // Disable this query
   });
 };
 

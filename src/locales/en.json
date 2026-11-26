@@ -56,12 +56,6 @@
     "submitResults": "Submit Results",
     "model": "Model",
     "actions": "Actions",
-    "metrics": {
-      "CER": "CER",
-      "WER": "WER",
-      "BLEU": "BLEU",
-      "ACCURACY": "Accuracy"
-    },
     "viewAll": "View all",
     "noLeaderboardsAvailable": "No leaderboards available",
     "checkBackLater": "Check back later when challenges have submissions.",
