@@ -213,7 +213,8 @@ export interface LeaderboardRow {
   created_at: string;
   headline_metric: number;
   preferred_model: string | null;
-  has_download: boolean;
+  // Prompt and Skill: where to download, relative to the API root; null for a Model.
+  download_url: string | null;
 }
 
 // How many rows the whole Leaderboard holds, in all and per Submission Type,

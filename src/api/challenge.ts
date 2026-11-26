@@ -24,11 +24,6 @@ const API_BASE_URL =
 // An absolute URL for a path the API returns relative to its root.
 export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
-// Where a Leaderboard row with `has_download` downloads from; a detail page
-// uses its `download_url` instead. No sign-in.
-export const submissionDownloadUrl = (submissionId: string) =>
-  apiUrl(`/submissions/${submissionId}/download`);
-
 // A failed create: `message` is the summary, `errors` lists each problem
 // in the uploaded data when the backend reports them (422).
 export class ChallengeCreateError extends Error {

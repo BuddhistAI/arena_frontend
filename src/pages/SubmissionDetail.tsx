@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowLeft, Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
-import { SubmissionReadError, apiUrl } from "../api/challenge";
+import { SubmissionReadError } from "../api/challenge";
 import { useResyncSubmission, useSubmissionDetail } from "../hooks/useChallenges";
 import { useCurrentUser } from "../hooks/useUsers";
 import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
@@ -231,7 +231,7 @@ const Details = ({ submission }: { submission: SubmissionDetailView }) => {
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className={cn(headingClass, "mb-0")}>{t("submissionDetail.details")}</h2>
         <div className="flex items-center gap-2">
-          {submission.download_url && <DownloadButton href={apiUrl(submission.download_url)} />}
+          {submission.download_url && <DownloadButton path={submission.download_url} />}
           <AdminResync submission={submission} />
         </div>
       </div>
