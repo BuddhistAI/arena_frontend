@@ -21,7 +21,7 @@ export interface Challenge {
   category: Category;
   repo_name: string;
   repo_url: string;
-  sync_status: "pending" | "synced" | "failed";
+  sync_status: SyncStatus;
   scorer_name?: string;
   scorer_label?: string;
   direction?: ScorerDirection;
@@ -34,6 +34,9 @@ export interface Challenge {
   maxSubmissionsPerTeam?: number;
   evaluationMetric?: string;
 }
+
+// Whether the Challenge Repo holds what the arena has published.
+export type SyncStatus = "pending" | "synced" | "failed";
 
 export type SubmissionType = "model" | "prompt" | "skill";
 
@@ -60,6 +63,9 @@ export interface UserSubmission {
   status_message: string | null;
   headline_metric: number | null;
   score_details: Record<string, unknown> | null;
+  // The Submission's folder in the Challenge Repo, set once synced.
+  repo_path: string | null;
+  sync_status: SyncStatus;
   created_at: string;
   updated_at: string;
 }

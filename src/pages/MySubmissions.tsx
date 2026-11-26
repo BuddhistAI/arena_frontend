@@ -4,6 +4,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import { FileText, Trophy, Calendar, Filter, AlertCircle } from "lucide-react";
 import { useUserSubmissions, useChallenges } from "../hooks/useChallenges";
 import {
+  SubmissionRepoLink,
   SubmissionScore,
   SubmissionStatusBadge,
 } from "../components/SubmissionSummary";
@@ -36,6 +37,14 @@ const MySubmissions = () => {
     });
     return map;
   }, [challengesResponse?.data]);
+
+  const repoUrls = useMemo(
+    () =>
+      Object.fromEntries(
+        (challengesResponse?.data || []).map((c) => [c.id, c.repo_url])
+      ) as Record<string, string>,
+    [challengesResponse?.data]
+  );
 
   const filteredSubmissions = submissions
     .filter((submission) => {
@@ -180,8 +189,12 @@ const MySubmissions = () => {
                           </Link>
                         </div>
 
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-2 space-y-2">
                           <SubmissionScore submission={submission} />
+                          <SubmissionRepoLink
+                            submission={submission}
+                            repoUrl={repoUrls[submission.challenge_id]}
+                          />
                         </div>
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import { useToast } from "../components/use-toast";
 import { ArrowLeft, Upload, CheckCircle, AlertCircle, Info, X } from "lucide-react";
 import {
   useChallenge,
+  usePreferredModels,
   useSubmitToChallenge,
   useUserSubmissions,
 } from "../hooks/useChallenges";
@@ -14,6 +15,7 @@ import {
   SubmissionLimitError,
 } from "../api/challenge";
 import {
+  SubmissionRepoLink,
   SubmissionScore,
   SubmissionStatusBadge,
 } from "../components/SubmissionSummary";
@@ -139,6 +141,9 @@ const Submission = () => {
   const isPrompt = submissionType === "prompt";
   const isSkill = submissionType === "skill";
   const isPromptOrSkill = isPrompt || isSkill;
+  const { data: preferredModelSuggestions = [] } = usePreferredModels({
+    enabled: isPromptOrSkill,
+  });
   const [submissionError, setSubmissionError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ChallengeDataError[]>([]);
   const [limitResetAt, setLimitResetAt] = useState<Date | null>(null);
@@ -640,12 +645,19 @@ const Submission = () => {
                   <input
                     type="text"
                     id="preferredModel"
+                    list="preferredModelSuggestions"
+                    autoComplete="off"
                     value={preferredModel}
                     onChange={(e) => withClear(setPreferredModel)(e.target.value)}
                     className={inputClass}
                     placeholder={t("submission.preferredModelPlaceholder")}
                     required
                   />
+                  <datalist id="preferredModelSuggestions">
+                    {preferredModelSuggestions.map((modelId) => (
+                      <option key={modelId} value={modelId} />
+                    ))}
+                  </datalist>
                   <p className={hintClass}>{t("submission.preferredModelHint")}</p>
                   <FieldErrors errors={errorsFor("preferred_model")} />
                 </div>
@@ -840,6 +852,10 @@ const Submission = () => {
                       </span>
                     </div>
                     <SubmissionScore submission={submission} />
+                    <SubmissionRepoLink
+                      submission={submission}
+                      repoUrl={challenge?.repo_url}
+                    />
                   </li>
                 ))}
               </ul>
