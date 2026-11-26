@@ -22,6 +22,10 @@ export interface Challenge {
   repo_name: string;
   repo_url: string;
   sync_status: "pending" | "synced" | "failed";
+  scorer_name?: string;
+  scorer_label?: string;
+  direction?: ScorerDirection;
+  locked?: boolean;
   // Keep some legacy fields for backward compatibility
   name?: string;
   startDate?: string;
@@ -31,16 +35,25 @@ export interface Challenge {
   evaluationMetric?: string;
 }
 
-// API response structure for user submissions
+export type SubmissionType = "model" | "prompt" | "skill";
+
+export type SubmissionStatus = "pending" | "processing" | "completed" | "failed";
+
+// A Submission as GET /submissions/{id} and /submissions/my return it.
+// `headline_metric` is unrounded; round it only for display.
 export interface UserSubmission {
-  user_id: string;
-  model_id: string;
-  challenge_id: string;
-  description: string;
-  dataset_url: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  status_message: string;
   id: string;
+  user_id: string;
+  challenge_id: string;
+  type: SubmissionType;
+  name: string;
+  description: string | null;
+  model_id: string | null;
+  model_link: string | null;
+  status: SubmissionStatus;
+  status_message: string | null;
+  headline_metric: number | null;
+  score_details: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -62,10 +75,19 @@ export interface Submission {
 }
 
 export interface SubmissionRequest {
-  file: File;
-  model_name: string;
   challenge_id: string;
+  type: SubmissionType;
+  name: string;
   description: string;
+  model_link?: string;
+  predictions_file: File;
+}
+
+// POST /submissions/create-submission answers 202 with this.
+export interface SubmissionCreatedResponse {
+  id: string;
+  status: SubmissionStatus;
+  message: string;
 }
 
 export interface ChallengeCreateRequest {
@@ -105,7 +127,8 @@ export interface Scorer {
   };
 }
 
-// One problem the backend found in the Challenge data (422 `errors`).
+// One problem the backend found in uploaded Challenge or Submission data
+// (422 `errors`).
 export interface ChallengeDataError {
   field: string;
   message: string;

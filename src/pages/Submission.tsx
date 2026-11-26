@@ -1,17 +1,52 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "../components/use-toast";
+import { ArrowLeft, Upload, CheckCircle, AlertCircle, Info } from "lucide-react";
 import {
-  ArrowLeft,
-  Upload,
-  CheckCircle,
-  AlertCircle,
-  FileText,
-  Info,
-} from "lucide-react";
-import { useChallenge, useSubmitToChallenge } from "../hooks/useChallenges";
+  useChallenge,
+  useSubmitToChallenge,
+  useUserSubmissions,
+} from "../hooks/useChallenges";
 import { useAuth } from "../auth/use-auth-hook";
 import { useTranslation } from "react-i18next";
+import { SubmissionCreateError } from "../api/challenge";
+import {
+  SubmissionScore,
+  SubmissionStatusBadge,
+} from "../components/SubmissionSummary";
+import type { ChallengeDataError, SubmissionType } from "../types/challenge";
+
+const SUBMISSION_TYPES: SubmissionType[] = ["model", "prompt", "skill"];
+// Prompt and Skill Submissions arrive in later tickets.
+const ACCEPTED_TYPES: SubmissionType[] = ["model"];
+// Form fields that show their errors under the input; any other field's
+// errors are listed with the summary.
+const INLINE_FIELDS = ["name", "description", "model_link", "predictions_file"];
+
+const inputClass =
+  "w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent";
+const labelClass =
+  "block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2";
+const hintClass = "mt-1 text-sm text-neutral-500 dark:text-neutral-400";
+
+const FieldErrors = ({ errors }: { errors: ChallengeDataError[] }) => {
+  const { t } = useTranslation();
+  if (errors.length === 0) return null;
+  return (
+    <ul role="alert" className="mt-2 space-y-1 text-sm text-red-700 dark:text-red-400">
+      {errors.map((err, index) => (
+        <li key={index} className="flex items-start">
+          <AlertCircle className="w-4 h-4 mr-1.5 mt-0.5 shrink-0" />
+          <span>
+            {err.line != null && `${t("submission.line", { line: err.line })}: `}
+            {err.id != null && `${t("submission.inputId", { id: err.id })}: `}
+            {err.message}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 const Submission = () => {
   const documentation_link=`${import.meta.env.VITE_SERVER_URL || "https://eval-api.pecha.tools"}/documentation`
@@ -28,28 +63,50 @@ const Submission = () => {
   } = useChallenge(challengeId || "");
 
   const submitMutation = useSubmitToChallenge();
+  const { data: mySubmissionsResponse } = useUserSubmissions({
+    enabled: isAuthenticated,
+  });
 
   const challenge = challengeResponse?.data;
+  const challengeSubmissions = (mySubmissionsResponse?.data ?? [])
+    .filter((submission) => submission.challenge_id === challengeId)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [modelName, setModelName] = useState("");
+  const [submissionType, setSubmissionType] = useState<SubmissionType>("model");
+  const [predictionsFile, setPredictionsFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [modelLink, setModelLink] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<ChallengeDataError[]>([]);
 
-  const handleFileSelect = (file: File) => {
-    if (file.type === "application/json") {
-      setSelectedFile(file);
-      if (submissionError) setSubmissionError(""); // Clear error when file is selected
-    } else {
-      setSubmissionError("Please select a valid JSON file");
-    }
+  const errorsFor = (field: string) =>
+    fieldErrors.filter((err) => err.field === field);
+  const otherErrors = fieldErrors.filter(
+    (err) => !INLINE_FIELDS.includes(err.field)
+  );
+
+  const clearErrors = () => {
+    setSubmissionError("");
+    setFieldErrors([]);
   };
+
+  // Wraps a field setter so that editing a field clears the last errors.
+  const withClear =
+    <T,>(setter: (value: T) => void) =>
+    (value: T) => {
+      setter(value);
+      clearErrors();
+    };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileSelect(file);
+      withClear(setPredictionsFile)(file);
     }
   };
 
@@ -70,63 +127,57 @@ const Submission = () => {
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      handleFileSelect(file);
+      withClear(setPredictionsFile)(file);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if user is authenticated
     if (!isAuthenticated) {
-      const shouldLogin = window.confirm(
-        "You need to be logged in to submit to challenges. Would you like to login now?"
-      );
-      if (shouldLogin) {
-        login(false); // Redirect to login
+      if (window.confirm(t("submission.loginConfirm"))) {
+        login(false);
       }
       return;
     }
-
-    if (
-      !selectedFile ||
-      !modelName.trim() ||
-      !description.trim() ||
-      !challengeId
-    ) {
-      setSubmissionError("Please fill in all required fields and select a file");
+    if (!predictionsFile || !challengeId) {
       return;
     }
-
-    setSubmissionError(""); // Clear previous errors
+    clearErrors();
 
     try {
       await submitMutation.mutateAsync({
-        file: selectedFile,
-        model_name: modelName.trim(),
         challenge_id: challengeId,
+        type: submissionType,
+        name: name.trim(),
         description: description.trim(),
+        model_link: modelLink.trim() || undefined,
+        predictions_file: predictionsFile,
       });
-
-      // Show success toast
-      success(
-        "Submission successful! 🎉",
-        "Your results are being processed and may take up to 15 minutes to reflect on the leaderboard.",
-        7000 // Show for 7 seconds
-      );
-
-      // Reset form
-      setSelectedFile(null);
-      setModelName("");
+      success(t("submission.accepted"), t("submission.acceptedDesc"), 7000);
+      setPredictionsFile(null);
+      setName("");
       setDescription("");
+      setModelLink("");
     } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Submission failed. Please check your file format and try again.";
-      setSubmissionError(errorMessage);
-      console.error("Submission failed:", error);
+      if (error instanceof SubmissionCreateError) {
+        setSubmissionError(error.message);
+        setFieldErrors(error.errors);
+      } else {
+        setSubmissionError(
+          error instanceof Error ? error.message : "Submission failed."
+        );
+      }
     }
   };
+
+  const canSubmit =
+    isAuthenticated &&
+    ACCEPTED_TYPES.includes(submissionType) &&
+    !!predictionsFile &&
+    !!name.trim() &&
+    !!description.trim() &&
+    !submitMutation.isPending;
 
   if (challengeLoading) {
     return (
@@ -233,20 +284,20 @@ const Submission = () => {
         <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-md overflow-hidden">
           <div className="bg-primary-600 text-white px-6 py-6">
             <h1 className="text-2xl font-bold mb-2">
-              Submit to {challenge.title || challenge.name}
+              {t("submission.title", { title: challenge.title || challenge.name })}
             </h1>
-            <p className="text-neutral-300">
-              Upload your model's results in JSON format
-            </p>
-            <div className="mt-3 text-sm text-neutral-300">
-              <p>
-                Evaluation Metric: {challenge.evaluationMetric || "Performance"}
+            <p className="text-neutral-300">{t("submission.subtitle")}</p>
+            {challenge.scorer_label && (
+              <p className="mt-3 text-sm text-neutral-300">
+                {t("submission.scorer", { label: challenge.scorer_label })}
+                {challenge.direction &&
+                  ` (${t(
+                    challenge.direction === "lower_is_better"
+                      ? "submission.lowerIsBetter"
+                      : "submission.higherIsBetter"
+                  )})`}
               </p>
-              <p>
-                Max Submissions:{" "}
-                {challenge.maxSubmissionsPerTeam || "Unlimited"} per team
-              </p>
-            </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -254,94 +305,115 @@ const Submission = () => {
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-start">
                 <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-2" />
-                <div>
-                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-400">
-                    Challenge Information
-                  </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                    {challenge.description}
-                  </p>
-                  <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                    <span>
-                      Created:{" "}
-                      {challenge.created_at
-                        ? new Date(challenge.created_at).toLocaleDateString()
-                        : "N/A"}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>
-                      Total Submissions: {challenge.totalSubmissions || 0}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-sm text-blue-700 dark:text-blue-400">
+                  {challenge.description}
+                </p>
               </div>
             </div>
 
-            {/* Model Information */}
+            {/* Submission Type */}
+            <fieldset>
+              <legend className={labelClass}>{t("submission.typeLabel")}</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {SUBMISSION_TYPES.map((type) => {
+                  const accepted = ACCEPTED_TYPES.includes(type);
+                  const selected = submissionType === type;
+                  return (
+                    <label
+                      key={type}
+                      className={`block rounded-lg border p-3 transition-colors duration-200 ${
+                        selected
+                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                          : "border-neutral-300 dark:border-neutral-600"
+                      } ${accepted ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="submissionType"
+                        value={type}
+                        checked={selected}
+                        disabled={!accepted}
+                        onChange={() => withClear(setSubmissionType)(type)}
+                        className="sr-only"
+                      />
+                      <span className="block font-medium text-neutral-700 dark:text-neutral-100">
+                        {t(`submission.types.${type}.title`)}
+                      </span>
+                      <span className="block text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                        {accepted
+                          ? t(`submission.types.${type}.hint`)
+                          : t("submission.notYetAvailable")}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <FieldErrors errors={errorsFor("type")} />
+            </fieldset>
+
+            {/* Name */}
             <div>
-              <label
-                htmlFor="modelName"
-                className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-              >
-                Model Name *
+              <label htmlFor="name" className={labelClass}>
+                {t("submission.modelName")} *
               </label>
               <input
                 type="text"
-                id="modelName"
-                value={modelName}
-                onChange={(e) => {
-                  setModelName(e.target.value);
-                  if (submissionError) setSubmissionError("");
-                }}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="e.g., MyAwesomeModel-v1.0"
+                id="name"
+                value={name}
+                onChange={(e) => withClear(setName)(e.target.value)}
+                className={inputClass}
+                placeholder={t("submission.modelNamePlaceholder")}
                 required
               />
-              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                You can add new model names, and they will be created in our
-                model table if the submission passes validation.
-              </p>
+              <p className={hintClass}>{t("submission.modelNameHint")}</p>
+              <FieldErrors errors={errorsFor("name")} />
             </div>
 
             {/* Description */}
             <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-              >
-                Description *
+              <label htmlFor="description" className={labelClass}>
+                {t("submission.description")} *
               </label>
               <textarea
                 id="description"
                 value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  if (submissionError) setSubmissionError("");
-                }}
+                onChange={(e) => withClear(setDescription)(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Brief description of your model or approach..."
+                className={inputClass}
+                placeholder={t("submission.descriptionPlaceholder")}
                 required
               />
-              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                This description will be displayed with your submission.
-              </p>
+              <FieldErrors errors={errorsFor("description")} />
             </div>
 
-            {/* File Upload */}
+            {/* Model Link */}
             <div>
-              <label
-                htmlFor="fileInput"
-                className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-              >
-                Upload Results File (JSON) *
+              <label htmlFor="modelLink" className={labelClass}>
+                {t("submission.modelLink")}
+              </label>
+              <input
+                type="url"
+                id="modelLink"
+                value={modelLink}
+                onChange={(e) => withClear(setModelLink)(e.target.value)}
+                className={inputClass}
+                placeholder="https://huggingface.co/..."
+              />
+              <p className={hintClass}>{t("submission.modelLinkHint")}</p>
+              <FieldErrors errors={errorsFor("model_link")} />
+            </div>
+
+            {/* Predictions File */}
+            <div>
+              <label htmlFor="fileInput" className={labelClass}>
+                {t("submission.predictionsFile")} *
               </label>
 
               <div
                 className={`relative border-2 border-dashed rounded-lg p-6 transition-colors duration-200 ${
                   dragActive
                     ? "border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20"
-                    : selectedFile
+                    : predictionsFile
                     ? "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20"
                     : "border-neutral-300 dark:border-neutral-600 hover:border-neutral-400 dark:hover:border-neutral-500"
                 }`}
@@ -353,7 +425,7 @@ const Submission = () => {
                 <input
                   id="fileInput"
                   type="file"
-                  accept=".json"
+                  accept=".jsonl,application/jsonl"
                   onChange={handleFileChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
@@ -368,72 +440,67 @@ const Submission = () => {
                     }
                   }}
                 >
-                  {selectedFile ? (
+                  {predictionsFile ? (
                     <div className="flex flex-col items-center">
                       <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
                       <p className="text-sm font-medium text-neutral-700 dark:text-neutral-100">
-                        {selectedFile.name}
+                        {predictionsFile.name}
                       </p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                        {(selectedFile.size / 1024).toFixed(1)} KB
+                        {(predictionsFile.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Upload className="w-12 h-12 text-neutral-400 mb-2" />
                       <p className="text-sm font-medium text-neutral-700 dark:text-neutral-100">
-                        Drop your JSON file here, or click to browse
-                      </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                        Only JSON files are accepted
+                        {t("submission.dropFile")}
                       </p>
                     </div>
                   )}
                 </div>
               </div>
+              <p className={hintClass}>
+                {t("submission.predictionsHint")}{" "}
+                <a
+                  href={documentation_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline underline-offset-2"
+                >
+                  {t("navigation.documentation")}
+                </a>
+              </p>
+              <FieldErrors errors={errorsFor("predictions_file")} />
             </div>
 
-            {/* File Format Information */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">
-                    Need help with submission format?
-                  </p>
-                  <a 
-                    href={documentation_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-flex items-center text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-2 underline-offset-2 transition-colors"
-                  >
-                    {t('navigation.documentation')}
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
             {/* Authentication Notice */}
             {!isAuthenticated && (
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <div className="flex items-center">
                   <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
-                  <p className="text-sm text-blue-800 dark:text-blue-400">
-                    Please{" "}
-                    <button
-                      type="button"
-                      onClick={() => login(false)}
-                      className="underline hover:text-blue-900 dark:hover:text-blue-300 font-medium"
-                    >
-                      login
-                    </button>{" "}
-                    to submit your results to this challenge.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => login(false)}
+                    className="text-sm text-blue-800 dark:text-blue-400 underline hover:text-blue-900 dark:hover:text-blue-300"
+                  >
+                    {t("submission.loginPrompt")}
+                  </button>
                 </div>
+              </div>
+            )}
+
+            {/* Rejection summary */}
+            {submissionError && (
+              <div
+                role="alert"
+                className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+              >
+                <div className="flex items-center">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 shrink-0" />
+                  <p className="text-red-800 dark:text-red-400">{submissionError}</p>
+                </div>
+                <FieldErrors errors={otherErrors} />
               </div>
             )}
 
@@ -447,55 +514,63 @@ const Submission = () => {
 
               <button
                 type="submit"
-                disabled={
-                  submitMutation.isPending ||
-                  !selectedFile ||
-                  !modelName.trim() ||
-                  !description.trim() ||
-                  !isAuthenticated
-                }
+                disabled={isAuthenticated && !canSubmit}
                 className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors duration-200 flex items-center"
-                title={!isAuthenticated ? "Please login to submit" : ""}
               >
                 {submitMutation.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Submitting...
+                    {t("submission.submitting")}
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    {!isAuthenticated ? "Login to Submit" : "Submit Results"}
+                    {isAuthenticated
+                      ? t("submission.submit")
+                      : t("submission.loginToSubmit")}
                   </>
                 )}
               </button>
             </div>
-
-            {/* Status Messages */}
-            {(submissionError || submitMutation.isError) && (
-              <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
-                <div className="text-red-800 dark:text-red-400">
-                  {submissionError && <p>{submissionError}</p>}
-                  {submitMutation.isError && !submissionError && (
-                    <p>
-                      {submitMutation.error instanceof Error
-                        ? submitMutation.error.message
-                        : "Submission failed. Please check your file format and try again."}
-                    </p>
-                  )}
-                  {submitMutation.isError && submissionError && (
-                    <p className="mt-1 text-sm">
-                      Technical details: {submitMutation.error instanceof Error
-                        ? submitMutation.error.message
-                        : "Unknown error occurred"}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
           </form>
         </div>
+
+        {/* The participant's own Submissions to this Challenge */}
+        {isAuthenticated && (
+          <section className="mt-8 mb-8">
+            <h2 className="text-xl font-semibold text-neutral-700 dark:text-neutral-100 mb-4">
+              {t("submission.yourSubmissions")}
+            </h2>
+            {challengeSubmissions.length === 0 ? (
+              <p className="text-neutral-500 dark:text-neutral-400">
+                {t("submission.noneYet")}
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {challengeSubmissions.map((submission) => (
+                  <li
+                    key={submission.id}
+                    className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 p-4 space-y-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-medium text-neutral-700 dark:text-neutral-100">
+                        {submission.name}
+                      </span>
+                      <span className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                        {t(`submission.types.${submission.type}.title`)}
+                      </span>
+                      <SubmissionStatusBadge status={submission.status} />
+                      <span className="ml-auto text-xs text-neutral-500 dark:text-neutral-400">
+                        {new Date(submission.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <SubmissionScore submission={submission} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

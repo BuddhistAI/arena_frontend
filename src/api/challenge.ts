@@ -3,6 +3,7 @@ import type {
   Category,
   UserSubmission,
   SubmissionRequest,
+  SubmissionCreatedResponse,
   SubmissionResponse,
   LeaderboardResult,
   LeaderboardEntry,
@@ -32,24 +33,41 @@ export class ChallengeCreateError extends Error {
   }
 }
 
-const challengeCreateError = async (
-  response: Response
-): Promise<ChallengeCreateError> => {
-  const fallback = `Failed to create challenge (status ${response.status})`;
+// A refused Submission: `message` is the summary, `errors` lists each
+// problem in the form or Predictions File when the backend reports them (422).
+export class SubmissionCreateError extends Error {
+  errors: ChallengeDataError[];
+
+  constructor(message: string, errors: ChallengeDataError[] = []) {
+    super(message);
+    this.name = "SubmissionCreateError";
+    this.errors = errors;
+  }
+}
+
+interface ValidationFailure {
+  message: string;
+  errors: ChallengeDataError[];
+}
+
+const parseValidationFailure = async (
+  response: Response,
+  fallback: string
+): Promise<ValidationFailure> => {
   let body: unknown;
   try {
     body = await response.json();
   } catch {
-    return new ChallengeCreateError(fallback);
+    return { message: fallback, errors: [] };
   }
   const data = body as { detail?: unknown; errors?: unknown };
 
-  // Our validator: {"detail": "...", "errors": [{field, message, line, id}]}
+  // Our validators: {"detail": "...", "errors": [{field, message, line, id}]}
   if (Array.isArray(data.errors)) {
-    return new ChallengeCreateError(
-      typeof data.detail === "string" ? data.detail : fallback,
-      data.errors as ChallengeDataError[]
-    );
+    return {
+      message: typeof data.detail === "string" ? data.detail : fallback,
+      errors: data.errors as ChallengeDataError[],
+    };
   }
   // FastAPI's own validation: {"detail": [{loc, msg}]}
   if (Array.isArray(data.detail)) {
@@ -59,12 +77,22 @@ const challengeCreateError = async (
         message: item.msg ?? "Invalid value",
       })
     );
-    return new ChallengeCreateError("Some fields are missing or invalid.", errors);
+    return { message: "Some fields are missing or invalid.", errors };
   }
   if (typeof data.detail === "string") {
-    return new ChallengeCreateError(data.detail);
+    return { message: data.detail, errors: [] };
   }
-  return new ChallengeCreateError(fallback);
+  return { message: fallback, errors: [] };
+};
+
+const challengeCreateError = async (
+  response: Response
+): Promise<ChallengeCreateError> => {
+  const { message, errors } = await parseValidationFailure(
+    response,
+    `Failed to create challenge (status ${response.status})`
+  );
+  return new ChallengeCreateError(message, errors);
 };
 
 // Export the centralized auth token setter for backward compatibility
@@ -270,61 +298,49 @@ export const challengeApi = {
     }
   },
 
-  // Submit to challenge
+  // Submit to a challenge; resolves once accepted (202, pending)
   submitToChallenge: async (
     submission: SubmissionRequest
-  ): Promise<ApiResponse<SubmissionResponse>> => {
+  ): Promise<ApiResponse<SubmissionCreatedResponse>> => {
+    const formData = new FormData();
+    formData.append("challenge_id", submission.challenge_id);
+    formData.append("type", submission.type);
+    formData.append("name", submission.name);
+    formData.append("description", submission.description);
+    if (submission.model_link) {
+      formData.append("model_link", submission.model_link);
+    }
+    formData.append("predictions_file", submission.predictions_file);
+
+    // Get headers without Content-Type (let browser set it for FormData)
+    const headers = await getAuthHeaders("none");
+
+    let response: Response;
     try {
-      const formData = new FormData();
-
-      // Add all fields to FormData
-      formData.append("file", submission.file);
-      formData.append("model_name", submission.model_name);
-      formData.append("challenge_id", submission.challenge_id);
-      formData.append("description", submission.description);
-
-      // Get headers without Content-Type (let browser set it for FormData)
-      const headers = await getAuthHeaders("none");
-
-      const response = await fetch(
-        `${API_BASE_URL}/submissions/create-submission`,
-        {
-          method: "POST",
-          headers,
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        // Try to parse error response body for detailed error message
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.detail && typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail;
-          } else if (errorData.message && typeof errorData.message === 'string') {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          // If parsing fails, keep the generic error message
-          console.warn("Failed to parse error response:", parseError);
-        }
-        throw new Error(errorMessage);
-      }
-
-      const result = await response.json();
-
-      return {
-        data: result,
-        message: "Submission successful! Your results are being processed.",
-        success: true,
-      };
+      response = await fetch(`${API_BASE_URL}/submissions/create-submission`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
     } catch (error) {
       console.error("Error submitting to challenge:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to submit to challenge"
-      );
+      throw new Error("Could not reach the server to submit");
     }
+
+    if (!response.ok) {
+      const { message, errors } = await parseValidationFailure(
+        response,
+        `Failed to submit (status ${response.status})`
+      );
+      throw new SubmissionCreateError(message, errors);
+    }
+
+    const created: SubmissionCreatedResponse = await response.json();
+    return {
+      data: created,
+      message: created.message,
+      success: true,
+    };
   },
 
   // Get all categories

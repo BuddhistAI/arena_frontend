@@ -58,7 +58,7 @@
     "actions": "Actions",
     "metrics": {
       "CER": "CER",
-      "WER": "WER", 
+      "WER": "WER",
       "BLEU": "BLEU",
       "ACCURACY": "Accuracy"
     },
@@ -313,5 +313,58 @@
   },
   "toast": {
     "dismiss": "Dismiss"
+  },
+  "submission": {
+    "title": "Submit to {{title}}",
+    "subtitle": "Pick what you built, describe it and upload your Predictions File.",
+    "scorer": "Scored by {{label}}",
+    "lowerIsBetter": "lower is better",
+    "higherIsBetter": "higher is better",
+    "typeLabel": "What are you submitting?",
+    "types": {
+      "model": {
+        "title": "Model",
+        "hint": "A model you trained or run, including closed APIs."
+      },
+      "prompt": {
+        "title": "Prompt",
+        "hint": "A prompt you ran on a frontier model."
+      },
+      "skill": {
+        "title": "Skill",
+        "hint": "A skill folder of instructions and scripts."
+      }
+    },
+    "notYetAvailable": "Not yet available",
+    "modelName": "Model name",
+    "modelNamePlaceholder": "e.g. Google Vision OCR",
+    "modelNameHint": "If this model name is already on the platform it is reused; otherwise it is created.",
+    "description": "Description",
+    "descriptionPlaceholder": "How you produced these predictions...",
+    "modelLink": "Model link (optional)",
+    "modelLinkHint": "Any https link: Hugging Face, a paper, a GitHub repo or a vendor page.",
+    "predictionsFile": "Predictions File (JSONL)",
+    "predictionsHint": "One row per Input id, each {\"id\": ..., \"prediction\": ...}, like the Challenge's sample submission.",
+    "dropFile": "Drop your JSONL file here, or click to browse",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "loginToSubmit": "Login to Submit",
+    "loginPrompt": "Please log in to submit to this challenge.",
+    "loginConfirm": "You need to be logged in to submit. Would you like to log in now?",
+    "accepted": "Submission accepted",
+    "acceptedDesc": "It is being scored; its status updates below.",
+    "line": "line {{line}}",
+    "inputId": "id \"{{id}}\"",
+    "yourSubmissions": "Your Submissions to this Challenge",
+    "noneYet": "You have not submitted to this Challenge yet.",
+    "status": {
+      "pending": "Pending",
+      "processing": "Scoring",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "headlineMetric": "Headline Metric",
+    "details": "Details",
+    "scoringFailed": "Scoring failed"
   }
 }

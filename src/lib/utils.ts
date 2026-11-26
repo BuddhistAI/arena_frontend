@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Scores are stored unrounded; round them only when showing them.
+export function formatMetric(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(4);
+}
+
 
 export function formatDurationShort(ms: number) {
   if (ms < 1000) {

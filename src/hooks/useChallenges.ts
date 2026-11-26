@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { challengeApi } from "../api/challenge";
 import type {
   SubmissionRequest,
+  UserSubmission,
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
@@ -72,13 +73,23 @@ export const useSubmission = (id: string) => {
   });
 };
 
-// Hook for fetching current user's submissions
-export const useUserSubmissions = () => {
+const userSubmissionsKey = ["userSubmissions"] as const;
+const SCORING_POLL_INTERVAL_MS = 3000;
+
+const isBeingScored = (submission: UserSubmission) =>
+  submission.status === "pending" || submission.status === "processing";
+
+// Hook for fetching current user's submissions. While any of them is still
+// being scored it refetches every few seconds, so statuses update in place.
+export const useUserSubmissions = ({ enabled = true } = {}) => {
   return useQuery({
-    queryKey: ["userSubmissions"],
+    queryKey: userSubmissionsKey,
     queryFn: challengeApi.getUserSubmissions,
+    enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: (query) =>
+      query.state.data?.data.some(isBeingScored) ? SCORING_POLL_INTERVAL_MS : false,
   });
 };
 
@@ -95,10 +106,7 @@ export const useSubmitToChallenge = () => {
         queryKey: challengeKeys.leaderboard(variables.challenge_id),
       });
 
-      // Invalidate user submissions (Note: teamName doesn't exist in SubmissionRequest)
-      queryClient.invalidateQueries({
-        queryKey: challengeKeys.userSubmissions(variables.challenge_id),
-      });
+      queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
 
       // Update challenge data (increment submission count)
       queryClient.invalidateQueries({
