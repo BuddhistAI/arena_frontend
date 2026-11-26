@@ -45,6 +45,32 @@ export class SubmissionCreateError extends Error {
   }
 }
 
+// The participant used today's Submissions to this Challenge (429);
+// `resetAt` is when they can submit again (the next 00:00 UTC).
+export class SubmissionLimitError extends Error {
+  resetAt: Date;
+
+  constructor(message: string, resetAt: Date) {
+    super(message);
+    this.name = "SubmissionLimitError";
+    this.resetAt = resetAt;
+  }
+}
+
+const submissionLimitError = async (
+  response: Response
+): Promise<SubmissionLimitError> => {
+  const body = (await response.json().catch(() => ({}))) as {
+    detail?: unknown;
+    reset_at?: unknown;
+  };
+  const message =
+    typeof body.detail === "string"
+      ? body.detail
+      : "Daily Submission limit reached";
+  return new SubmissionLimitError(message, new Date(String(body.reset_at)));
+};
+
 interface ValidationFailure {
   message: string;
   errors: ChallengeDataError[];
@@ -338,6 +364,9 @@ export const challengeApi = {
       throw new Error("Could not reach the server to submit");
     }
 
+    if (response.status === 429) {
+      throw await submissionLimitError(response);
+    }
     if (!response.ok) {
       const { message, errors } = await parseValidationFailure(
         response,

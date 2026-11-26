@@ -9,7 +9,10 @@ import {
 } from "../hooks/useChallenges";
 import { useAuth } from "../auth/use-auth-hook";
 import { useTranslation } from "react-i18next";
-import { SubmissionCreateError } from "../api/challenge";
+import {
+  SubmissionCreateError,
+  SubmissionLimitError,
+} from "../api/challenge";
 import {
   SubmissionScore,
   SubmissionStatusBadge,
@@ -64,6 +67,38 @@ const FieldErrors = ({ errors }: { errors: ChallengeDataError[] }) => {
   );
 };
 
+const DailyLimitNotice = ({ resetAt }: { resetAt: Date }) => {
+  const { t, i18n } = useTranslation();
+  const known = !Number.isNaN(resetAt.getTime());
+  const format = (options: Intl.DateTimeFormatOptions) =>
+    resetAt.toLocaleString(i18n.language, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      ...options,
+    });
+  return (
+    <div
+      role="alert"
+      className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+    >
+      <div className="flex items-start">
+        <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 shrink-0" />
+        <div className="text-yellow-800 dark:text-yellow-300">
+          <p className="font-medium">{t("submission.limitReached")}</p>
+          {known && (
+            <p className="text-sm mt-1">
+              {t("submission.limitResetsAt", {
+                local: format({}),
+                utc: format({ timeZone: "UTC" }),
+              })}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Submission = () => {
   const documentation_link=`${import.meta.env.VITE_SERVER_URL || "https://eval-api.pecha.tools"}/documentation`
   const { t } = useTranslation();
@@ -104,6 +139,7 @@ const Submission = () => {
   const isPrompt = submissionType === "prompt";
   const [submissionError, setSubmissionError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ChallengeDataError[]>([]);
+  const [limitResetAt, setLimitResetAt] = useState<Date | null>(null);
 
   const errorsFor = (field: string) =>
     fieldErrors.filter((err) => err.field === field);
@@ -195,6 +231,7 @@ const Submission = () => {
       return;
     }
     clearErrors();
+    setLimitResetAt(null);
 
     try {
       await submitMutation.mutateAsync({
@@ -208,7 +245,9 @@ const Submission = () => {
       success(t("submission.accepted"), t("submission.acceptedDesc"), 7000);
       resetForm();
     } catch (error) {
-      if (error instanceof SubmissionCreateError) {
+      if (error instanceof SubmissionLimitError) {
+        setLimitResetAt(error.resetAt);
+      } else if (error instanceof SubmissionCreateError) {
         setSubmissionError(error.message);
         setFieldErrors(error.errors);
       } else {
@@ -655,6 +694,8 @@ const Submission = () => {
                 </div>
               </div>
             )}
+
+            {limitResetAt && <DailyLimitNotice resetAt={limitResetAt} />}
 
             {/* Rejection summary */}
             {submissionError && (
