@@ -370,6 +370,8 @@
     "submitting": "Submitting...",
     "loginToSubmit": "Login to Submit",
     "loginPrompt": "Please log in to submit to this challenge.",
+    "publishedAs": "Published as @{{username}} on the Leaderboard and in the public Challenge Repo.",
+    "changeUsername": "Change username",
     "loginConfirm": "You need to be logged in to submit. Would you like to log in now?",
     "accepted": "Submission accepted",
     "acceptedDesc": "It is being scored; its status updates below.",

@@ -10,6 +10,32 @@ const API_BASE_URL =
   import.meta.env.VITE_SERVER_URL || "https://eval-api.pecha.tools";
   
 
+// The server refused a profile update: a username that is taken (409) or
+// invalid (422). `message` is the server's reason, to show beside the field.
+export class UserUpdateError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "UserUpdateError";
+    this.status = status;
+  }
+}
+
+// The server's reason for a refused update: FastAPI's `detail` string, or the
+// first validation message ("Value error, ..." with its prefix dropped).
+const userUpdateError = async (response: Response): Promise<UserUpdateError> => {
+  const body = (await response.json().catch(() => ({}))) as { detail?: unknown };
+  const { detail } = body;
+  let message = `HTTP error! status: ${response.status}`;
+  if (typeof detail === "string") {
+    message = detail;
+  } else if (Array.isArray(detail) && typeof detail[0]?.msg === "string") {
+    message = detail[0].msg.replace(/^Value error, /, "");
+  }
+  return new UserUpdateError(message, response.status);
+};
+
 // API functions
 export const userApi = {
   // Get current user profile
@@ -88,36 +114,30 @@ export const userApi = {
     }
   },
 
-  // Update current user (matches your backend endpoint)
+  // Update current user. A refused update throws a UserUpdateError carrying
+  // the server's reason.
   updateUserProfile: async (
     updates: UserUpdateRequest
   ): Promise<ApiResponse<User>> => {
-    try {
-      const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders();
 
-      const response = await fetch(`${API_BASE_URL}/users/me`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify(updates),
-      });
+    const response = await fetch(`${API_BASE_URL}/users/me`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(updates),
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const updatedUser: User = await response.json();
-
-      return {
-        data: updatedUser,
-        message: "Profile updated successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error updating user profile:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to update profile"
-      );
+    if (!response.ok) {
+      throw await userUpdateError(response);
     }
+
+    const updatedUser: User = await response.json();
+
+    return {
+      data: updatedUser,
+      message: "Profile updated successfully",
+      success: true,
+    };
   },
 
   // Create new user (matches your backend endpoint)
