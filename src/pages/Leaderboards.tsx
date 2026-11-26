@@ -12,64 +12,63 @@ import {
 } from "lucide-react";
 import {
   useChallenges,
-  useAllLeaderboards,
+  useLeaderboard,
   useDeleteSubmission,
 } from "../hooks/useChallenges";
 import { useCurrentUser } from "../hooks/useUsers";
 import ShareButton from "../components/ShareButton";
-import LeaderboardChart from "../components/LeaderboardChart";
+import HeadlineMetricChart from "../components/HeadlineMetricChart";
+import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
 import LeaderboardActionsMenu from "../components/LeaderboardActionsMenu";
 import { useToast } from "../components/use-toast";
-import ArenaRanking from "../components/ArenaRanking";  
-import MattricHelper from "../components/MattricHelper";
+import ArenaRanking from "../components/ArenaRanking";
+import { formatMetric } from "../utils/formatMetric";
+import type { Challenge } from "../types/challenge";
 
-const Leaderboards = () => {
+// How many of a Challenge's top rows its overview card shows.
+const PREVIEW_ROWS = 5;
+
+const getRankIcon = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return <Crown className="w-5 h-5 text-yellow-500" />;
+    case 2:
+      return <Medal className="w-5 h-5 text-neutral-400" />;
+    case 3:
+      return <Award className="w-5 h-5 text-amber-600" />;
+    default:
+      return (
+        <span className="w-5 h-5 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-semibold text-sm">
+          {rank}
+        </span>
+      );
+  }
+};
+
+interface ChallengeLeaderboardCardProps {
+  challenge: Challenge;
+  isAdmin: boolean;
+  onShare: () => void;
+}
+
+// One Challenge's top rows, read from the same server ranking as its
+// Leaderboard page (and sharing its first-page cache).
+const ChallengeLeaderboardCard = ({
+  challenge,
+  isAdmin,
+  onShare,
+}: ChallengeLeaderboardCardProps) => {
   const { t } = useTranslation();
-  // State to track view mode for each leaderboard (challengeId -> view mode)
-  const [viewModes, setViewModes] = useState<Record<string, "table" | "chart">>({});
-  // State to track which share modal to show
-  const [activeShareModal, setActiveShareModal] = useState<string | null>(null);
-  // State to track whether to show Arena or Challenges leaderboard
-  const [leaderboardType, setLeaderboardType] = useState<"arena" | "challenges">("arena");
-  
-  const {
-    data: challengesResponse,
-    isLoading: challengesLoading,
-    error: challengesError,
-  } = useChallenges();
-  const challenges = challengesResponse?.data || [];
-  const { data: currentUserData } = useCurrentUser();
+  const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const deleteSubmissionMutation = useDeleteSubmission();
   const { success } = useToast();
+  const { data: leaderboard, isLoading, error } = useLeaderboard(challenge.id);
 
-  const {
-    data: leaderboardsData,
-    isLoading: leaderboardsLoading,
-    error: leaderboardsError,
-  } = useAllLeaderboards(challenges);
+  const title = challenge.title || challenge.name || "Challenge";
+  const scorer = leaderboard?.scorer;
+  const rows = (leaderboard?.rows || []).slice(0, PREVIEW_ROWS);
 
-  const isLoading = challengesLoading || leaderboardsLoading;
-  const error = challengesError || leaderboardsError;
-  const user = currentUserData?.data;
-  const isAdmin = user?.role === "admin";
-
-  // Toggle view mode for a specific leaderboard
-  const toggleViewMode = (challengeId: string) => {
-    setViewModes(prev => ({
-      ...prev,
-      [challengeId]: prev[challengeId] === "chart" ? "table" : "chart"
-    }));
-  };
-
-  // Get current view mode for a leaderboard (defaults to table)
-  const getCurrentViewMode = (challengeId: string): "table" | "chart" => {
-    return viewModes[challengeId] || "table";
-  };
-
-  const handleDeleteSubmission = async (
-    submissionId: string,
-    challengeId: string
-  ) => {
+  const handleDeleteSubmission = async (submissionId: string) => {
     if (
       window.confirm(
         "Are you sure you want to delete this submission? This action cannot be undone."
@@ -78,9 +77,8 @@ const Leaderboards = () => {
       try {
         await deleteSubmissionMutation.mutateAsync({
           submissionId,
-          challengeId,
+          challengeId: challenge.id,
         });
-        // Show success toast
         success(
           "Submission deleted successfully! ✅",
           "The submission has been removed from the leaderboard.",
@@ -93,48 +91,197 @@ const Leaderboards = () => {
     }
   };
 
+  return (
+    <div className="bg-white relative dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden pb-12">
+      {/* Compact Challenge Header */}
+      <div className="px-4 py-2">
+        <div className="flex items-center justify-between">
+          <h2
+            className="text-md font-semibold text-neutral-500 dark:text-neutral-100 truncate cursor-help"
+            title={challenge.description || title}
+          >
+            {title}
+          </h2>
+          <div className="flex items-center space-x-2">
+            {leaderboard && (
+              <span className="text-xs dark:text-neutral-400">
+                {leaderboard.counts.all}
+              </span>
+            )}
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="w-5 h-5 text-yellow-500" />;
-      case 2:
-        return <Medal className="w-5 h-5 text-neutral-400" />;
-      case 3:
-        return <Award className="w-5 h-5 text-amber-600" />;
-      default:
-        return (
-          <span className="w-5 h-5 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-semibold text-sm">
-            {rank}
-          </span>
-        );
-    }
-  };
+            {rows.length > 0 && (
+              <div className="flex items-center bg-neutral-100 dark:bg-neutral-600 rounded-md p-0.5">
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`p-1 rounded text-xs transition-colors duration-200 ${
+                    viewMode === "table"
+                      ? "bg-white dark:bg-neutral-700 dark:text-neutral-100 shadow-sm"
+                      : "dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-100"
+                  }`}
+                  title="Table view"
+                >
+                  <Table className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setViewMode("chart")}
+                  className={`p-1 rounded text-xs transition-colors duration-200 ${
+                    viewMode === "chart"
+                      ? "bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 shadow-sm"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-100"
+                  }`}
+                  title="Chart view"
+                >
+                  <BarChart3 className="w-3 h-3" />
+                </button>
+              </div>
+            )}
 
-  const formatScore = (value: number, metric: string) => {
-    // For percentage-based metrics, show as percentage
-    if (metric === "CER" || metric === "WER" || metric === "ACCURACY") {
-      return `${(value * 100).toFixed(2)}%`;
-    }
-    // For other metrics, show as decimal
-    return value.toFixed(4);
-  };
+            <LeaderboardActionsMenu
+              challengeId={challenge.id}
+              challengeTitle={title}
+              onShare={onShare}
+            />
+          </div>
+        </div>
+      </div>
 
-  const getMetricClass = (metric: string) => {
-    // Different colors for different metrics
-    switch (metric) {
-      case "CER":
-        return "text-red-600 dark:text-red-400";
-      case "WER":
-        return "text-orange-600 dark:text-orange-400";
-      case "ACCURACY":
-        return "text-green-600 dark:text-green-400";
-      case "BLEU":
-        return "text-primary-600 dark:text-primary-400";
-      default:
-        return "text-neutral-700 dark:text-neutral-100";
-    }
-  };
+      {isLoading && (
+        <div className="py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+        </div>
+      )}
+
+      {!isLoading && (error || !scorer) && (
+        <p className="text-center py-8 text-xs text-red-600 dark:text-red-400">
+          Failed to load leaderboard data.
+        </p>
+      )}
+
+      {scorer && rows.length === 0 && (
+        <div className="text-center py-8">
+          <Trophy className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+          <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-100 mb-1">
+            No submissions yet
+          </h3>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
+            Be the first to submit!
+          </p>
+          <Link
+            to={`/submit/${challenge.id}`}
+            className="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors duration-200"
+          >
+            Submit Results
+          </Link>
+        </div>
+      )}
+
+      {scorer && rows.length > 0 && viewMode === "table" && (
+        <div className="overflow-x-auto overflow-y-visible">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead>
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
+                  #
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
+                  Submitter
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
+                  {scorer.label}
+                </th>
+                {isAdmin && (
+                  <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
+                    {t("leaderboards.actions")}
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {rows.map((row) => (
+                <tr
+                  key={row.submission_id}
+                  className="hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors duration-150"
+                >
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex items-center">
+                      {getRankIcon(row.rank)}
+                      <span className="ml-1 text-xs font-medium text-neutral-700 dark:text-neutral-100">
+                        {row.rank}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <SubmissionTypeBadge type={row.type} />
+                      <span
+                        className="text-xs font-medium text-neutral-700 dark:text-neutral-100 truncate max-w-32"
+                        title={row.name}
+                      >
+                        {row.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="text-xs text-neutral-600 dark:text-neutral-300 truncate max-w-24">
+                      @{row.submitter}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-100">
+                      {formatMetric(row.headline_metric, scorer.format)}
+                    </div>
+                  </td>
+                  {isAdmin && (
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <button
+                        onClick={() => handleDeleteSubmission(row.submission_id)}
+                        disabled={deleteSubmissionMutation.isPending}
+                        className="inline-flex items-center px-1 py-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Delete submission"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {scorer && rows.length > 0 && viewMode === "chart" && (
+        <HeadlineMetricChart rows={rows} scorer={scorer} className="p-4" />
+      )}
+
+      <Link
+        to={`/leaderboard/${challenge.id}`}
+        className="w-full flex items-center bottom-0 absolute justify-center bg-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-700 dark:bg-neutral-700 p-3 text-center text-neutral-500 dark:text-neutral-200"
+      >
+        View all
+      </Link>
+    </div>
+  );
+};
+
+const Leaderboards = () => {
+  const { t } = useTranslation();
+  // State to track which share modal to show
+  const [activeShareModal, setActiveShareModal] = useState<string | null>(null);
+  // State to track whether to show Arena or Challenges leaderboard
+  const [leaderboardType, setLeaderboardType] = useState<"arena" | "challenges">("arena");
+
+  const {
+    data: challengesResponse,
+    isLoading,
+    error,
+  } = useChallenges();
+  const challenges = challengesResponse?.data || [];
+  const { data: currentUserData } = useCurrentUser();
+  const isAdmin = currentUserData?.data?.role === "admin";
 
   if (isLoading) {
     return (
@@ -215,213 +362,18 @@ const Leaderboards = () => {
           
         
           
-          {leaderboardsData?.map((leaderboard) => {
-            // Get available metrics from first submission
-            const availableMetrics =
-              leaderboard.submissions.length > 0
-                ? Object.keys(leaderboard.submissions[0].metrics || {})
-                : [];
-
-            return (
-              <div
-                key={leaderboard.challengeId}
-                className="bg-white relative dark:bg-neutral-800 rounded-lg shadow-sm border  border-neutral-200 dark:border-neutral-700 overflow-hidden"
-              >
-                {/* Compact Challenge Header */}
-                <div className=" px-4 py-2 ">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <h2
-                        className="text-md  font-semibold  text-neutral-500 dark:text-neutral-100 truncate cursor-help"
-                        title={
-                          challenges.find(
-                            (c) => c.id === leaderboard.challengeId
-                          )?.description || leaderboard.challengeTitle
-                        }
-                      >
-                        {leaderboard.challengeTitle}
-                      </h2>
-                    
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs  dark:text-neutral-400">
-                        {leaderboard.submissions.length}
-                      </span>
-                      
-                      {/* View Toggle Buttons */}
-                      {leaderboard.submissions.length > 0 && (
-                        <div className="flex items-center bg-neutral-100 dark:bg-neutral-600 rounded-md p-0.5">
-                          <button
-                            onClick={() => toggleViewMode(leaderboard.challengeId)}
-                            className={`p-1 rounded text-xs transition-colors duration-200 ${
-                              getCurrentViewMode(leaderboard.challengeId) === "table"
-                                ? "bg-white dark:bg-neutral-700  dark:text-neutral-100 shadow-sm"
-                                : " dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-100"
-                            }`}
-                            title="Table view"
-                          >
-                            <Table className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => toggleViewMode(leaderboard.challengeId)}
-                            className={`p-1 rounded text-xs transition-colors duration-200 ${
-                              getCurrentViewMode(leaderboard.challengeId) === "chart"
-                                ? "bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 shadow-sm"
-                                : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-100"
-                            }`}
-                            title="Chart view"
-                          >
-                            <BarChart3 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* Hamburger Actions Menu */}
-                      <LeaderboardActionsMenu
-                        challengeId={leaderboard.challengeId}
-                        challengeTitle={leaderboard.challengeTitle || "Challenge"}
-                        onShare={() => setActiveShareModal(leaderboard.challengeId)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Leaderboard Content - Table or Chart */}
-                {leaderboard.submissions.length === 0 && (
-                  <div className="text-center py-8">
-                    <Trophy className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
-                    <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-100 mb-1">
-                      No submissions yet
-                    </h3>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
-                      Be the first to submit!
-                    </p>
-                    <Link
-                      to={`/submit/${leaderboard.challengeId}`}
-                      className="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors duration-200"
-                    >
-                      Submit Results
-                    </Link>
-                  </div>
-                )}
-                
-                {leaderboard.submissions.length > 0 && getCurrentViewMode(leaderboard.challengeId) === "table" && (
-                  <div className="overflow-x-auto overflow-y-visible">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium  dark:text-neutral-400 uppercase tracking-wider">
-                            #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium  dark:text-neutral-400 uppercase tracking-wider">
-                            {t('leaderboards.model')}
-                          </th>
-                          {availableMetrics.slice(0, 2).map((metric) => (
-                            <th
-                              key={metric}
-                              className="px-3 py-2 text-left text-xs font-medium  dark:text-neutral-400 uppercase tracking-wider"
-                            >
-                            
-{t(`leaderboards.metrics.${metric}`, metric)}
-<MattricHelper metric={metric} />
-                            </th>
-                          ))}
-                          {isAdmin && (
-                            <th className="px-3 py-2 text-left text-xs font-medium  dark:text-neutral-400 uppercase tracking-wider">
-                              {t('leaderboards.actions')}
-                            </th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {leaderboard.submissions
-                          .slice(0, 8)
-                          .map((submission) => (
-                            <tr
-                              key={
-                                submission.submission_id ||
-                                `submission-${Math.random()}`
-                              }
-                              className="hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors duration-150"
-                            >
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  {getRankIcon(submission.rank || 0)}
-                                  <span className="ml-1 text-xs font-medium text-neutral-700 dark:text-neutral-100">
-                                    {submission.rank || 0}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                <div className="text-xs font-medium text-neutral-700 dark:text-neutral-100 truncate max-w-32">
-                                  {submission.model_name}
-                                </div>
-                              </td>
-                              {availableMetrics.slice(0, 2).map((metric) => (
-                                <td
-                                  key={metric}
-                                  className="px-3 py-2 whitespace-nowrap"
-                                >
-                                  <div
-                                    className={`text-xs font-semibold ${getMetricClass(
-                                      metric
-                                    )}`}
-                                  >
-                                    {submission.metrics[metric] !== undefined
-                                      ? formatScore(
-                                          submission.metrics[metric],
-                                          metric
-                                        )
-                                      : "-"}
-                                  </div>
-                                </td>
-                              ))}
-                            
-                              {isAdmin && (
-                                <td className="px-3 py-2 whitespace-nowrap">
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteSubmission(
-                                        submission.submission_id || "",
-                                        leaderboard.challengeId
-                                      )
-                                    }
-                                    disabled={
-                                      deleteSubmissionMutation.isPending
-                                    }
-                                    className="inline-flex items-center px-1 py-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Delete submission"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                
-                {leaderboard.submissions.length > 0 && getCurrentViewMode(leaderboard.challengeId) === "chart" && (
-                  <LeaderboardChart
-                    submissions={leaderboard.submissions}
-                    availableMetrics={availableMetrics}
-                    className="p-4"
-                  />
-                )}
-                <Link
-                  to={`/leaderboard/${leaderboard.challengeId}`}
-                  className="w-full flex items-center bottom-0 absolute justify-center bg-neutral-100   hover:bg-neutral-200 dark:hover:bg-neutral-700 dark:bg-neutral-700 p-3 text-center  text-neutral-500 dark:text-neutral-200 ">View all</Link>
-              </div>
-            );
-          })}
-
-          
+          {challenges.map((challenge) => (
+            <ChallengeLeaderboardCard
+              key={challenge.id}
+              challenge={challenge}
+              isAdmin={isAdmin}
+              onShare={() => setActiveShareModal(challenge.id)}
+            />
+          ))}
         </div>
         )}
 
-        {leaderboardType === "challenges" && leaderboardsData?.length === 0 && (
+        {leaderboardType === "challenges" && challenges.length === 0 && (
           <div className="text-center py-12">
             <Trophy className="w-16 h-16 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-100 mb-2">
@@ -453,7 +405,7 @@ const Leaderboards = () => {
             <ShareButton
               challengeId={activeShareModal}
               challengeTitle={
-                leaderboardsData?.find(lb => lb.challengeId === activeShareModal)?.challengeTitle || "Challenge"
+                challenges.find((c) => c.id === activeShareModal)?.title || "Challenge"
               }
               autoOpen={true}
               onClose={() => setActiveShareModal(null)}
