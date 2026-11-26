@@ -365,6 +365,8 @@
     },
     "headlineMetric": "Headline Metric",
     "details": "Details",
-    "scoringFailed": "Scoring failed"
+    "scoringFailed": "Scoring failed",
+    "limitReached": "You have reached today's limit of 10 Submissions to this Challenge.",
+    "limitResetsAt": "You can submit again from {{local}} your time ({{utc}} UTC)."
   }
 }
