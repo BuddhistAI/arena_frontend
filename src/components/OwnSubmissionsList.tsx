@@ -11,9 +11,11 @@ import type { UserSubmission } from "../types/challenge";
 const OwnSubmissionsList = ({
   submissions,
   repoUrl,
+  scorerName,
 }: {
   submissions: UserSubmission[];
   repoUrl?: string;
+  scorerName?: string;
 }) => {
   const { t } = useTranslation();
   return (
@@ -44,7 +46,7 @@ const OwnSubmissionsList = ({
                   {new Date(submission.created_at).toLocaleString()}
                 </span>
               </div>
-              <SubmissionScore submission={submission} />
+              <SubmissionScore submission={submission} scorerName={scorerName} />
               <div className="flex flex-wrap items-center gap-3">
                 <SubmissionRepoLink submission={submission} repoUrl={repoUrl} />
                 <DeleteSubmissionButton submission={submission} className="ml-auto" />

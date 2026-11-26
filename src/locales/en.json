@@ -384,7 +384,6 @@
       "failed": "Failed"
     },
     "headlineMetric": "Headline Metric",
-    "details": "Details",
     "scoringFailed": "Scoring failed",
     "repoFolder": "View in the Challenge Repo",
     "sync": {
