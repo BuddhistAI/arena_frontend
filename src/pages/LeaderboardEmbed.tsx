@@ -2,34 +2,13 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import {
   Trophy,
-  Crown,
-  Medal,
-  Award,
   BarChart3,
   Table,
 } from "lucide-react";
 import { useChallenge, useLeaderboard } from "../hooks/useChallenges";
 import HeadlineMetricChart from "../components/HeadlineMetricChart";
-import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
-import { formatMetric } from "../utils/formatMetric";
+import LeaderboardRowCells from "../components/LeaderboardRowCells";
 import { submissionDetailPath } from "../utils/submissionPath";
-
-const getRankIcon = (rank: number) => {
-  switch (rank) {
-    case 1:
-      return <Crown className="w-5 h-5 text-yellow-500" />;
-    case 2:
-      return <Medal className="w-5 h-5 text-neutral-400" />;
-    case 3:
-      return <Award className="w-5 h-5 text-amber-600" />;
-    default:
-      return (
-        <span className="w-5 h-5 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-semibold text-sm">
-          {rank}
-        </span>
-      );
-  }
-};
 
 const getStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {
@@ -195,40 +174,24 @@ const LeaderboardEmbed = () => {
                       key={row.submission_id}
                       className="hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors duration-150"
                     >
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {getRankIcon(row.rank)}
-                          <span className="ml-1 text-xs font-medium text-neutral-700 dark:text-neutral-100">
-                            {row.rank}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <SubmissionTypeBadge type={row.type} />
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {/* The embed lives in an iframe on another site, so
-                            the detail page opens in a new tab on ours. */}
-                        <a
-                          href={submissionDetailPath(challengeId, row.submission_id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block text-xs font-medium text-neutral-700 dark:text-neutral-100 hover:underline truncate max-w-40"
-                          title={row.name}
-                        >
-                          {row.name}
-                        </a>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="text-xs text-neutral-600 dark:text-neutral-300 truncate max-w-32">
-                          @{row.submitter}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-100">
-                          {formatMetric(row.headline_metric, scorer.display_format)}
-                        </div>
-                      </td>
+                      <LeaderboardRowCells
+                        row={row}
+                        scorer={scorer}
+                        density="compact"
+                        name={
+                          // The embed lives in an iframe on another site, so
+                          // the detail page opens in a new tab on ours.
+                          <a
+                            href={submissionDetailPath(challengeId, row.submission_id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-xs font-medium text-neutral-700 dark:text-neutral-100 hover:underline truncate max-w-40"
+                            title={row.name}
+                          >
+                            {row.name}
+                          </a>
+                        }
+                      />
                     </tr>
                   ))}
                 </tbody>

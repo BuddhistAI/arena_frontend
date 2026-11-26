@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Medal,
   Trophy,
   Edit,
   Eye,
@@ -21,31 +20,13 @@ import {
 import { useCurrentUser } from "../hooks/useUsers";
 import ShareButton from "../components/ShareButton";
 import HeadlineMetricChart from "../components/HeadlineMetricChart";
-import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
+import LeaderboardRowCells from "../components/LeaderboardRowCells";
 import DownloadButton from "../components/DownloadButton";
 import LeaderboardFilters from "../components/LeaderboardFilters";
 import { useToast } from "../components/use-toast";
 import SubmissionSyncPanel from "../components/SubmissionSyncPanel";
-import { formatMetric } from "../utils/formatMetric";
 import { submissionDetailPath } from "../utils/submissionPath";
 import type { LeaderboardFilter } from "../types/challenge";
-
-const getRankIcon = (rank: number) => {
-  switch (rank) {
-    case 1:
-      return <Medal className="w-6 h-6 text-yellow-500" />;
-    case 2:
-      return <Medal className="w-6 h-6 text-neutral-400" />;
-    case 3:
-      return <Medal className="w-6 h-6 text-amber-600" />;
-    default:
-      return (
-        <span className="w-6 h-6 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-semibold">
-          {rank}
-        </span>
-      );
-  }
-};
 
 const Leaderboard = () => {
   const { t } = useTranslation();
@@ -306,32 +287,7 @@ const Leaderboard = () => {
                       key={row.submission_id}
                       className="hover:bg-neutral-100 dark:hover:bg-neutral-700"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {getRankIcon(row.rank)}
-                          <span className="ml-2 text-sm font-medium text-neutral-600 dark:text-neutral-100">
-                            #{row.rank}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <SubmissionTypeBadge type={row.type} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-neutral-600 dark:text-neutral-100 max-w-xs truncate">
-                          {row.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-neutral-600 dark:text-neutral-100">
-                          @{row.submitter}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-neutral-700 dark:text-neutral-100">
-                          {formatMetric(row.headline_metric, scorer.display_format)}
-                        </div>
-                      </td>
+                      <LeaderboardRowCells row={row} scorer={scorer} density="comfortable" />
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-neutral-600 dark:text-neutral-100">
                           {row.preferred_model ?? ""}

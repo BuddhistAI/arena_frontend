@@ -3,9 +3,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Trophy,
-  Crown,
-  Medal,
-  Award,
   Trash2,
   BarChart3,
   Table,
@@ -18,32 +15,14 @@ import {
 import { useCurrentUser } from "../hooks/useUsers";
 import ShareButton from "../components/ShareButton";
 import HeadlineMetricChart from "../components/HeadlineMetricChart";
-import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
+import LeaderboardRowCells from "../components/LeaderboardRowCells";
 import LeaderboardActionsMenu from "../components/LeaderboardActionsMenu";
 import { useToast } from "../components/use-toast";
 import ArenaRanking from "../components/ArenaRanking";
-import { formatMetric } from "../utils/formatMetric";
 import type { Challenge } from "../types/challenge";
 
 // How many of a Challenge's top rows its overview card shows.
 const PREVIEW_ROWS = 5;
-
-const getRankIcon = (rank: number) => {
-  switch (rank) {
-    case 1:
-      return <Crown className="w-5 h-5 text-yellow-500" />;
-    case 2:
-      return <Medal className="w-5 h-5 text-neutral-400" />;
-    case 3:
-      return <Award className="w-5 h-5 text-amber-600" />;
-    default:
-      return (
-        <span className="w-5 h-5 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-semibold text-sm">
-          {rank}
-        </span>
-      );
-  }
-};
 
 interface ChallengeLeaderboardCardProps {
   challenge: Challenge;
@@ -184,6 +163,9 @@ const ChallengeLeaderboardCard = ({
                   #
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
                   Name
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium dark:text-neutral-400 uppercase tracking-wider">
@@ -205,35 +187,7 @@ const ChallengeLeaderboardCard = ({
                   key={row.submission_id}
                   className="hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors duration-150"
                 >
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {getRankIcon(row.rank)}
-                      <span className="ml-1 text-xs font-medium text-neutral-700 dark:text-neutral-100">
-                        {row.rank}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <SubmissionTypeBadge type={row.type} />
-                      <span
-                        className="text-xs font-medium text-neutral-700 dark:text-neutral-100 truncate max-w-32"
-                        title={row.name}
-                      >
-                        {row.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-xs text-neutral-600 dark:text-neutral-300 truncate max-w-24">
-                      @{row.submitter}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-100">
-                      {formatMetric(row.headline_metric, scorer.display_format)}
-                    </div>
-                  </td>
+                  <LeaderboardRowCells row={row} scorer={scorer} density="compact" />
                   {isAdmin && (
                     <td className="px-3 py-2 whitespace-nowrap">
                       <button
