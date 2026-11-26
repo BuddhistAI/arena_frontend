@@ -82,7 +82,7 @@ export const useSubmissionDetail = (id: string) => {
     enabled: !!id,
     staleTime: 30 * 1000, // 30 seconds - its status or sync may change
     retry: (failureCount, error) =>
-      !(error instanceof SubmissionReadError && [404, 410].includes(error.status)) &&
+      !(error instanceof SubmissionReadError && error.outcome !== "failed") &&
       failureCount < 3,
   });
 };

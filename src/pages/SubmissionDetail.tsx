@@ -32,7 +32,7 @@ const SubmissionDetail = () => {
     return <Centered>{t("submissionDetail.loading")}</Centered>;
   }
   // A shared link to a deleted Submission says so, and nothing else.
-  if (error instanceof SubmissionReadError && error.status === 410) {
+  if (error instanceof SubmissionReadError && error.outcome === "deleted") {
     return (
       <Centered>
         <h1 className="text-xl font-semibold text-neutral-700 dark:text-neutral-100">
@@ -53,7 +53,7 @@ const SubmissionDetail = () => {
   );
 
   if (error || !submission) {
-    const notFound = error instanceof SubmissionReadError && error.status === 404;
+    const notFound = error instanceof SubmissionReadError && error.outcome === "notFound";
     return (
       <div className="max-w-4xl mx-auto px-4">
         <div className="mb-6">{backLink}</div>
