@@ -195,7 +195,7 @@ export interface Scorer {
 }
 
 // GET /challenges/{id}/leaderboard: one page of a Challenge's Leaderboard,
-// ranked on the server. A row's `rank` is its place on the whole Leaderboard.
+// ranked on the server. A row's `rank` is its Rank on the whole Leaderboard, whatever the filter.
 export interface LeaderboardScorer {
   name: string;
   label: string;

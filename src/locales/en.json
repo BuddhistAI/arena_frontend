@@ -417,7 +417,7 @@
     "submittedOn": "submitted {{date}}",
     "description": "Description",
     "noDescription": "No description.",
-    "score": "Score",
+    "headlineMetric": "Headline Metric",
     "details": "Details",
     "modelLink": "Model link",
     "repoFolder": "Challenge Repo",

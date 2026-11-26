@@ -76,7 +76,7 @@ const SubmissionDetail = () => {
       <div>{backLink}</div>
       <Header submission={submission} />
       {submission.status === "completed" ? (
-        <Score submission={submission} />
+        <HeadlineMetric submission={submission} />
       ) : (
         <Status submission={submission} />
       )}
@@ -135,12 +135,12 @@ const Header = ({ submission }: { submission: SubmissionDetailView }) => {
 };
 
 // The Headline Metric under the Scorer's label, then the Public Summary.
-const Score = ({ submission }: { submission: SubmissionDetailView }) => {
+const HeadlineMetric = ({ submission }: { submission: SubmissionDetailView }) => {
   const { t } = useTranslation();
   const { scorer } = submission;
   return (
     <section className={panelClass}>
-      <h2 className={headingClass}>{t("submissionDetail.score")}</h2>
+      <h2 className={headingClass}>{t("submissionDetail.headlineMetric")}</h2>
       <dl className="flex flex-wrap gap-x-10 gap-y-3">
         <div>
           <dt className="text-sm text-neutral-500 dark:text-neutral-400">{scorer.label}</dt>
