@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { Menu } from "lucide-react";
 
 import Sidebar from "./components/Sidebar";
@@ -13,6 +13,8 @@ import Leaderboard from "./pages/Leaderboard";
 import Leaderboards from "./pages/Leaderboards";
 import LeaderboardEmbed from "./pages/LeaderboardEmbed";
 import Submission from "./pages/Submission";
+import SubmissionDetail from "./pages/SubmissionDetail";
+import { SUBMISSION_DETAIL_ROUTE } from "./utils/submissionPath";
 import Profile from "./pages/Profile";
 import MySubmissions from "./pages/MySubmissions";
 import Settings from "./pages/Settings";
@@ -194,6 +196,14 @@ const App = () => {
                         element={
                           <div className="p-4 lg:p-6">
                             <Leaderboard />
+                          </div>
+                        }
+                      />
+                      <Route
+                        path={SUBMISSION_DETAIL_ROUTE}
+                        element={
+                          <div className="p-4 lg:p-6">
+                            <SubmissionDetail />
                           </div>
                         }
                       />
