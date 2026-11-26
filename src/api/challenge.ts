@@ -347,6 +347,9 @@ export const challengeApi = {
     if (submission.prompt_file) {
       formData.append("prompt_file", submission.prompt_file);
     }
+    if (submission.skill_file) {
+      formData.append("skill_file", submission.skill_file);
+    }
     formData.append("predictions_file", submission.predictions_file);
 
     // Get headers without Content-Type (let browser set it for FormData)

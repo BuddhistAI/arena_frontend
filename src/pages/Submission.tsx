@@ -26,8 +26,6 @@ import {
 } from "../types/challenge";
 
 const SUBMISSION_TYPES: SubmissionType[] = ["model", "prompt", "skill"];
-// Skill Submissions arrive in a later ticket.
-const ACCEPTED_TYPES: SubmissionType[] = ["model", "prompt"];
 const DEFAULT_LICENSE: SubmissionLicense = "CC-BY-4.0";
 // Form fields that show their errors under the input; any other field's
 // errors are listed with the summary.
@@ -37,6 +35,7 @@ const INLINE_FIELDS = [
   "model_link",
   "prompt_text",
   "prompt_file",
+  "skill_file",
   "preferred_model",
   "license",
   "predictions_file",
@@ -133,10 +132,13 @@ const Submission = () => {
   const [modelLink, setModelLink] = useState("");
   const [promptText, setPromptText] = useState("");
   const [promptFile, setPromptFile] = useState<File | null>(null);
+  const [skillFile, setSkillFile] = useState<File | null>(null);
   const [preferredModel, setPreferredModel] = useState("");
   const [license, setLicense] = useState<SubmissionLicense>(DEFAULT_LICENSE);
   const [dragActive, setDragActive] = useState(false);
   const isPrompt = submissionType === "prompt";
+  const isSkill = submissionType === "skill";
+  const isPromptOrSkill = isPrompt || isSkill;
   const [submissionError, setSubmissionError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ChallengeDataError[]>([]);
   const [limitResetAt, setLimitResetAt] = useState<Date | null>(null);
@@ -175,16 +177,29 @@ const Submission = () => {
     e.target.value = "";
   };
 
+  const handleSkillFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      withClear(setSkillFile)(file);
+    }
+    e.target.value = "";
+  };
+
   // Only the chosen Submission Type's fields are sent; the backend refuses
   // the others.
-  const typeFields = (): Partial<SubmissionRequest> =>
-    isPrompt
-      ? {
-          preferred_model: preferredModel.trim(),
-          license,
-          ...(promptFile ? { prompt_file: promptFile } : { prompt_text: promptText }),
-        }
-      : { model_link: modelLink.trim() || undefined };
+  const typeFields = (): Partial<SubmissionRequest> => {
+    if (!isPromptOrSkill) {
+      return { model_link: modelLink.trim() || undefined };
+    }
+    const shared = { preferred_model: preferredModel.trim(), license };
+    if (isSkill) {
+      return { ...shared, skill_file: skillFile ?? undefined };
+    }
+    return {
+      ...shared,
+      ...(promptFile ? { prompt_file: promptFile } : { prompt_text: promptText }),
+    };
+  };
 
   const resetForm = () => {
     setPredictionsFile(null);
@@ -193,6 +208,7 @@ const Submission = () => {
     setModelLink("");
     setPromptText("");
     setPromptFile(null);
+    setSkillFile(null);
     setPreferredModel("");
     setLicense(DEFAULT_LICENSE);
   };
@@ -258,15 +274,16 @@ const Submission = () => {
     }
   };
 
-  const promptReady =
-    (!!promptFile || !!promptText.trim()) && !!preferredModel.trim();
+  const artifactReady = isPrompt
+    ? !!promptFile || !!promptText.trim()
+    : !isSkill || !!skillFile;
   const canSubmit =
     isAuthenticated &&
-    ACCEPTED_TYPES.includes(submissionType) &&
     !!predictionsFile &&
     !!name.trim() &&
     !!description.trim() &&
-    (!isPrompt || promptReady) &&
+    artifactReady &&
+    (!isPromptOrSkill || !!preferredModel.trim()) &&
     !submitMutation.isPending;
 
   if (challengeLoading) {
@@ -406,7 +423,6 @@ const Submission = () => {
               <legend className={labelClass}>{t("submission.typeLabel")}</legend>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {SUBMISSION_TYPES.map((type) => {
-                  const accepted = ACCEPTED_TYPES.includes(type);
                   const selected = submissionType === type;
                   return (
                     <label
@@ -415,14 +431,13 @@ const Submission = () => {
                         selected
                           ? "border-green-500 bg-green-50 dark:bg-green-900/20"
                           : "border-neutral-300 dark:border-neutral-600"
-                      } ${accepted ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+                      } cursor-pointer`}
                     >
                       <input
                         type="radio"
                         name="submissionType"
                         value={type}
                         checked={selected}
-                        disabled={!accepted}
                         onChange={() => withClear(setSubmissionType)(type)}
                         className="sr-only"
                       />
@@ -430,9 +445,7 @@ const Submission = () => {
                         {t(`submission.types.${type}.title`)}
                       </span>
                       <span className="block text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                        {accepted
-                          ? t(`submission.types.${type}.hint`)
-                          : t("submission.notYetAvailable")}
+                        {t(`submission.types.${type}.hint`)}
                       </span>
                     </label>
                   );
@@ -444,7 +457,7 @@ const Submission = () => {
             {/* Name */}
             <div>
               <label htmlFor="name" className={labelClass}>
-                {t(isPrompt ? "submission.name" : "submission.modelName")} *
+                {t(isPromptOrSkill ? "submission.name" : "submission.modelName")} *
               </label>
               <input
                 type="text"
@@ -455,11 +468,13 @@ const Submission = () => {
                 placeholder={t(
                   isPrompt
                     ? "submission.promptNamePlaceholder"
+                    : isSkill
+                    ? "submission.skillNamePlaceholder"
                     : "submission.modelNamePlaceholder"
                 )}
                 required
               />
-              {!isPrompt && (
+              {!isPromptOrSkill && (
                 <p className={hintClass}>{t("submission.modelNameHint")}</p>
               )}
               <FieldErrors errors={errorsFor("name")} />
@@ -474,23 +489,31 @@ const Submission = () => {
                 id="description"
                 value={description}
                 onChange={(e) => withClear(setDescription)(e.target.value)}
-                rows={isPrompt ? 4 : 3}
+                rows={isPromptOrSkill ? 4 : 3}
                 className={inputClass}
                 placeholder={t(
                   isPrompt
                     ? "submission.promptDescriptionPlaceholder"
+                    : isSkill
+                    ? "submission.skillDescriptionPlaceholder"
                     : "submission.descriptionPlaceholder"
                 )}
                 required
               />
-              {isPrompt && (
-                <p className={hintClass}>{t("submission.promptDescriptionHint")}</p>
+              {isPromptOrSkill && (
+                <p className={hintClass}>
+                  {t(
+                    isSkill
+                      ? "submission.skillDescriptionHint"
+                      : "submission.promptDescriptionHint"
+                  )}
+                </p>
               )}
               <FieldErrors errors={errorsFor("description")} />
             </div>
 
             {/* Model Link */}
-            {!isPrompt && (
+            {!isPromptOrSkill && (
               <div>
                 <label htmlFor="modelLink" className={labelClass}>
                   {t("submission.modelLink")}
@@ -563,7 +586,52 @@ const Submission = () => {
                   </div>
                   <FieldErrors errors={errorsFor("prompt_file")} />
                 </div>
+              </>
+            )}
 
+            {/* Skill zip */}
+            {isSkill && (
+              <div>
+                <label htmlFor="skillFile" className={labelClass}>
+                  {t("submission.skillFile")} *
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label
+                    htmlFor="skillFile"
+                    className="inline-flex items-center px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors duration-200"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {t("submission.skillFileLabel")}
+                  </label>
+                  <input
+                    id="skillFile"
+                    type="file"
+                    accept=".zip,application/zip"
+                    onChange={handleSkillFileChange}
+                    className="sr-only"
+                  />
+                  {skillFile && (
+                    <span className="inline-flex items-center text-sm text-neutral-700 dark:text-neutral-200">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" />
+                      {skillFile.name} ({(skillFile.size / 1024).toFixed(1)} KB)
+                      <button
+                        type="button"
+                        onClick={() => withClear(setSkillFile)(null)}
+                        className="ml-2 inline-flex items-center text-neutral-500 hover:text-red-600"
+                        aria-label={t("submission.removeFile")}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+                <p className={hintClass}>{t("submission.skillFileHint")}</p>
+                <FieldErrors errors={errorsFor("skill_file")} />
+              </div>
+            )}
+
+            {isPromptOrSkill && (
+              <>
                 {/* Preferred Model */}
                 <div>
                   <label htmlFor="preferredModel" className={labelClass}>

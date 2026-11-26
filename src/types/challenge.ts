@@ -86,11 +86,14 @@ export interface SubmissionRequest {
   name: string;
   description: string;
   model_link?: string;
-  // Prompt only. Send the prompt as `prompt_text` or `prompt_file`, not both.
+  // Prompt and Skill only.
   preferred_model?: string;
   license?: SubmissionLicense;
+  // Prompt only. Send the prompt as `prompt_text` or `prompt_file`, not both.
   prompt_text?: string;
   prompt_file?: File;
+  // Skill only: the skill folder as a zip.
+  skill_file?: File;
   predictions_file: File;
 }
 
