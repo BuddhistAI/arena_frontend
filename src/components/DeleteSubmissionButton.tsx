@@ -2,6 +2,7 @@ import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDeleteSubmission } from "../hooks/useChallenges";
 import { useToast } from "./use-toast";
+import { cn, submissionActionClass } from "../lib/utils";
 import type { UserSubmission } from "../types/challenge";
 
 // Render only for the submitter or an admin; the backend refuses anyone else.
@@ -34,7 +35,11 @@ const DeleteSubmissionButton = ({
       type="button"
       onClick={handleDelete}
       disabled={deleteSubmission.isPending}
-      className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-md bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={cn(
+        submissionActionClass,
+        "bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-500/20",
+        className
+      )}
     >
       <Trash2 className="w-3 h-3 mr-1" />
       {deleteSubmission.isPending ? t("submission.deleting") : t("submission.delete")}

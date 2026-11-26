@@ -5,6 +5,7 @@ import {
   useResyncSubmission,
 } from "../hooks/useChallenges";
 import { useToast } from "./use-toast";
+import { cn, submissionActionClass } from "../lib/utils";
 import DeleteSubmissionButton from "./DeleteSubmissionButton";
 import {
   SubmissionRepoLink,
@@ -69,7 +70,10 @@ const SubmissionSyncPanel = ({ challenge }: { challenge: Challenge }) => {
                       type="button"
                       onClick={() => handleResync(submission)}
                       disabled={resync.isPending}
-                      className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md bg-neutral-500/20 text-neutral-700 dark:text-neutral-100 hover:bg-neutral-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={cn(
+                        submissionActionClass,
+                        "bg-neutral-500/20 text-neutral-700 dark:text-neutral-100 hover:bg-neutral-500/30"
+                      )}
                     >
                       <RefreshCw className="w-3 h-3 mr-1" />
                       {t("submission.resync")}

@@ -10,6 +10,10 @@ export function formatMetric(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(4);
 }
 
+// The small action buttons on a Submission's row (Delete, Resync).
+export const submissionActionClass =
+  "inline-flex items-center px-3 py-1 text-xs font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed";
+
 
 export function formatDurationShort(ms: number) {
   if (ms < 1000) {

@@ -175,21 +175,17 @@ const Submission = () => {
     }
   };
 
-  const handlePromptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      withClear(setPromptFile)(file);
-    }
-    e.target.value = "";
-  };
-
-  const handleSkillFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      withClear(setSkillFile)(file);
-    }
-    e.target.value = "";
-  };
+  // The input is emptied so that choosing the same file again after removing
+  // it fires another change.
+  const handleArtifactFileChange =
+    (setter: (file: File) => void) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        withClear(setter)(file);
+      }
+      e.target.value = "";
+    };
 
   // Only the chosen Submission Type's fields are sent; the backend refuses
   // the others.
@@ -572,7 +568,7 @@ const Submission = () => {
                       id="promptFile"
                       type="file"
                       accept=".md,.txt,text/markdown,text/plain"
-                      onChange={handlePromptFileChange}
+                      onChange={handleArtifactFileChange(setPromptFile)}
                       className="sr-only"
                     />
                     {promptFile && (
@@ -613,7 +609,7 @@ const Submission = () => {
                     id="skillFile"
                     type="file"
                     accept=".zip,application/zip"
-                    onChange={handleSkillFileChange}
+                    onChange={handleArtifactFileChange(setSkillFile)}
                     className="sr-only"
                   />
                   {skillFile && (
