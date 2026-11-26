@@ -1,3 +1,5 @@
+import type { MetricFormat } from "../utils/formatMetric";
+
 export interface Category {
   id: string;
   name: string;
@@ -62,7 +64,8 @@ export interface UserSubmission {
   status: SubmissionStatus;
   status_message: string | null;
   headline_metric: number | null;
-  score_details: Record<string, unknown> | null;
+  // The Scorer's Public Summary once completed; per-item scores are never sent.
+  public_summary: PublicSummaryValue[] | null;
   // The Submission's folder in the Challenge Repo, set once synced.
   repo_path: string | null;
   sync_status: SyncStatus;
@@ -137,10 +140,24 @@ export interface ScorerParameter {
   enum?: unknown[];
 }
 
+// One aggregate number a Scorer declares safe to show beside the Headline Metric.
+export interface PublicSummaryEntry {
+  key: string;
+  label: string;
+  format: MetricFormat;
+}
+
+// A Public Summary entry of a scored Submission, with its value.
+export interface PublicSummaryValue extends PublicSummaryEntry {
+  value: number;
+}
+
 export interface Scorer {
   name: string;
   label: string;
   direction: ScorerDirection;
+  display_format: MetricFormat;
+  public_summary: PublicSummaryEntry[];
   parameter_schema: {
     type?: "object";
     properties?: Record<string, ScorerParameter>;

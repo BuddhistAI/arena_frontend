@@ -47,6 +47,14 @@ const MySubmissions = () => {
     [challengesResponse?.data]
   );
 
+  const scorerNames = useMemo(
+    () =>
+      Object.fromEntries(
+        (challengesResponse?.data || []).map((c) => [c.id, c.scorer_name])
+      ) as Record<string, string | undefined>,
+    [challengesResponse?.data]
+  );
+
   const filteredSubmissions = submissions
     .filter((submission) => {
       if (filterStatus === "all") return true;
@@ -191,7 +199,10 @@ const MySubmissions = () => {
                         </div>
 
                         <div className="md:col-span-2 space-y-2">
-                          <SubmissionScore submission={submission} />
+                          <SubmissionScore
+                            submission={submission}
+                            scorerName={scorerNames[submission.challenge_id]}
+                          />
                           <SubmissionRepoLink
                             submission={submission}
                             repoUrl={repoUrls[submission.challenge_id]}

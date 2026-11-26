@@ -631,6 +631,7 @@ const Submission = () => {
           <OwnSubmissionsList
             submissions={challengeSubmissions}
             repoUrl={challenge.repo_url}
+            scorerName={challenge.scorer_name}
           />
         )}
       </div>
