@@ -26,6 +26,7 @@ import LeaderboardFilters from "../components/LeaderboardFilters";
 import { useToast } from "../components/use-toast";
 import SubmissionSyncPanel from "../components/SubmissionSyncPanel";
 import { formatMetric } from "../utils/formatMetric";
+import { submissionDetailPath } from "../utils/submissionPath";
 import type { LeaderboardFilter } from "../types/challenge";
 
 const getRankIcon = (rank: number) => {
@@ -342,16 +343,14 @@ const Leaderboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          {/* Opens the Submission's detail page once it has a route. */}
-                          <button
-                            type="button"
-                            disabled
-                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 bg-neutral-500/10 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          <Link
+                            to={submissionDetailPath(challengeId || "", row.submission_id)}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 bg-neutral-500/10 hover:bg-neutral-500/20 rounded"
                             title="View Detail"
                           >
                             <Eye className="w-3 h-3 mr-1" />
                             View Detail
-                          </button>
+                          </Link>
                           {isAdmin && (
                             <button
                               onClick={() => handleDeleteSubmission(row.submission_id)}
