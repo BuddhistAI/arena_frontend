@@ -22,11 +22,13 @@ import { useCurrentUser } from "../hooks/useUsers";
 import ShareButton from "../components/ShareButton";
 import HeadlineMetricChart from "../components/HeadlineMetricChart";
 import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
+import DownloadButton from "../components/DownloadButton";
 import LeaderboardFilters from "../components/LeaderboardFilters";
 import { useToast } from "../components/use-toast";
 import SubmissionSyncPanel from "../components/SubmissionSyncPanel";
 import { formatMetric } from "../utils/formatMetric";
 import { submissionDetailPath } from "../utils/submissionPath";
+import { submissionDownloadUrl } from "../api/challenge";
 import type { LeaderboardFilter } from "../types/challenge";
 
 const getRankIcon = (rank: number) => {
@@ -351,6 +353,9 @@ const Leaderboard = () => {
                             <Eye className="w-3 h-3 mr-1" />
                             View Detail
                           </Link>
+                          {row.has_download && (
+                            <DownloadButton href={submissionDownloadUrl(row.submission_id)} />
+                          )}
                           {isAdmin && (
                             <button
                               onClick={() => handleDeleteSubmission(row.submission_id)}
