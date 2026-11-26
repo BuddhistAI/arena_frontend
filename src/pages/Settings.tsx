@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth0 } from "../hooks/useAuth0";
+import { useCurrentUser, useUpdateUserProfile } from "../hooks/useUsers";
+import { challengeKeys } from "../hooks/useChallenges";
 import ProtectedRoute from "../components/ProtectedRoute";
 import {
   Settings as SettingsIcon,
@@ -10,17 +13,98 @@ import {
   LogOut,
 } from "lucide-react";
 
+// The public username Submissions are published under. The server checks it
+// (unique, 3 to 30 of a-z, 0-9, - and _) and its refusal is shown inline.
+const UsernameField = ({ current }: { current: string }) => {
+  const queryClient = useQueryClient();
+  const updateProfile = useUpdateUserProfile();
+  const [draft, setDraft] = useState(current);
+  const [saved, setSaved] = useState(false);
+  const error = updateProfile.error?.message;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaved(false);
+    updateProfile.mutate(
+      { username: draft.trim() },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          // Leaderboard rows name submitters by their current username.
+          queryClient.invalidateQueries({ queryKey: challengeKeys.leaderboards() });
+        },
+      }
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit} noValidate>
+      <label
+        htmlFor="username"
+        className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
+      >
+        Public username
+      </label>
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <span className="absolute inset-y-0 left-3 flex items-center text-neutral-500 dark:text-neutral-400">
+            @
+          </span>
+          <input
+            id="username"
+            type="text"
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setSaved(false);
+              updateProfile.reset();
+            }}
+            autoComplete="username"
+            spellCheck={false}
+            aria-invalid={!!error}
+            aria-describedby="username-hint username-error"
+            className={`w-full pl-7 pr-3 py-2 border rounded-md bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+              error
+                ? "border-red-500 dark:border-red-400"
+                : "border-neutral-300 dark:border-neutral-600"
+            }`}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={draft.trim() === current || !draft.trim() || updateProfile.isPending}
+          className="flex items-center px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors duration-200"
+        >
+          <Save className="w-4 h-4 mr-2" />
+          {updateProfile.isPending ? "Saving..." : "Save"}
+        </button>
+      </div>
+      {error ? (
+        <p id="username-error" role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      ) : saved ? (
+        <p id="username-error" role="status" className="mt-1 text-sm text-green-700 dark:text-green-400">
+          Username saved.
+        </p>
+      ) : null}
+      <p id="username-hint" className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+        Your Submissions are published under this name on the Leaderboard and in
+        public Challenge Repos. Use 3 to 30 lowercase letters, digits, - or _.
+        Submissions already published to a repo keep the name they were
+        published with.
+      </p>
+    </form>
+  );
+};
+
 const Settings = () => {
   const { user, logout } = useAuth0();
+  const { data: currentUserResponse } = useCurrentUser();
+  const username = currentUserResponse?.data?.username;
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
   const [newChallengeAlerts, setNewChallengeAlerts] = useState(false);
-  const [publicProfile, setPublicProfile] = useState(false);
-
-  const handleSaveSettings = () => {
-    // In a real app, this would save to the backend
-    alert("Settings saved successfully!");
-  };
 
   const handleLogout = () => {
     logout({
@@ -55,6 +139,9 @@ const Settings = () => {
                 </h2>
               </div>
               <div className="p-6 space-y-6">
+                {username !== undefined && (
+                  <UsernameField current={username} />
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label
