@@ -1,57 +1,15 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
-import {
-  FileText,
-  Trophy,
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Filter,
-  AlertCircle,
-} from "lucide-react";
+import { FileText, Trophy, Calendar, Filter, AlertCircle } from "lucide-react";
 import { useUserSubmissions, useChallenges } from "../hooks/useChallenges";
+import {
+  SubmissionRepoLink,
+  SubmissionScore,
+  SubmissionStatusBadge,
+} from "../components/SubmissionSummary";
+import DeleteSubmissionButton from "../components/DeleteSubmissionButton";
 import type { UserSubmission } from "../types/challenge";
-
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case "completed":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Completed
-        </span>
-      );
-    case "processing":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400">
-          <Clock className="w-3 h-3 mr-1" />
-          Processing
-        </span>
-      );
-    case "pending":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400">
-          <Clock className="w-3 h-3 mr-1" />
-          Pending
-        </span>
-      );
-    case "failed":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400">
-          <XCircle className="w-3 h-3 mr-1" />
-          Failed
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300">
-          {status}
-        </span>
-      );
-  }
-};
 
 const MySubmissions = () => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -80,6 +38,14 @@ const MySubmissions = () => {
     });
     return map;
   }, [challengesResponse?.data]);
+
+  const repoUrls = useMemo(
+    () =>
+      Object.fromEntries(
+        (challengesResponse?.data || []).map((c) => [c.id, c.repo_url])
+      ) as Record<string, string>,
+    [challengesResponse?.data]
+  );
 
   const filteredSubmissions = submissions
     .filter((submission) => {
@@ -205,10 +171,9 @@ const MySubmissions = () => {
                       <div className="flex items-center space-x-3 mb-3">
                         <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         <h3 className="text-lg font-semibold text-neutral-700 dark:text-neutral-100">
-                          {submission.description ||
-                            `Submission ${submission.id.slice(0, 8)}`}
+                          {submission.name}
                         </h3>
-                        {getStatusBadge(submission.status)}
+                        <SubmissionStatusBadge status={submission.status} />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
@@ -225,41 +190,13 @@ const MySubmissions = () => {
                           </Link>
                         </div>
 
-                        <div>
-                          <p className="text-neutral-500 dark:text-neutral-400">
-                            Dataset URL
-                          </p>
-                          <p className="font-medium text-neutral-700 dark:text-neutral-100 text-xs break-all">
-                            {submission.dataset_url ? (
-                              <a
-                                href={submission.dataset_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                {submission.dataset_url.length > 30
-                                  ? `${submission.dataset_url.slice(0, 30)}...`
-                                  : submission.dataset_url}
-                              </a>
-                            ) : (
-                              "N/A"
-                            )}
-                          </p>
+                        <div className="md:col-span-2 space-y-2">
+                          <SubmissionScore submission={submission} />
+                          <SubmissionRepoLink
+                            submission={submission}
+                            repoUrl={repoUrls[submission.challenge_id]}
+                          />
                         </div>
-
-                        {(submission.status === "processing" ||
-                          submission.status === "pending") &&
-                          submission.status_message && (
-                            <div className="md:col-span-2">
-                              <p className="text-neutral-500 dark:text-neutral-400">
-                                Status Message
-                              </p>
-                              <p className="font-medium text-yellow-600 dark:text-yellow-400">
-                                {submission.status_message ||
-                                  "Your submission is being processed..."}
-                              </p>
-                            </div>
-                          )}
                       </div>
                     </div>
 
@@ -279,6 +216,9 @@ const MySubmissions = () => {
                           <Trophy className="w-4 h-4 mr-1" />
                           View Leaderboard
                         </Link>
+                      </div>
+                      <div className="mt-2">
+                        <DeleteSubmissionButton submission={submission} />
                       </div>
                     </div>
                   </div>

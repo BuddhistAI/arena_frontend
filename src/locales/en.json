@@ -58,7 +58,7 @@
     "actions": "Actions",
     "metrics": {
       "CER": "CER",
-      "WER": "WER", 
+      "WER": "WER",
       "BLEU": "BLEU",
       "ACCURACY": "Accuracy"
     },
@@ -313,5 +313,95 @@
   },
   "toast": {
     "dismiss": "Dismiss"
+  },
+  "submission": {
+    "title": "Submit to {{title}}",
+    "subtitle": "Pick what you built, describe it and upload your Predictions File.",
+    "scorer": "Scored by {{label}}",
+    "lowerIsBetter": "lower is better",
+    "higherIsBetter": "higher is better",
+    "typeLabel": "What are you submitting?",
+    "types": {
+      "model": {
+        "title": "Model",
+        "hint": "A model you trained or run, including closed APIs."
+      },
+      "prompt": {
+        "title": "Prompt",
+        "hint": "A prompt you ran on a frontier model."
+      },
+      "skill": {
+        "title": "Skill",
+        "hint": "A skill folder of instructions and scripts."
+      }
+    },
+    "modelName": "Model name",
+    "modelNamePlaceholder": "e.g. Google Vision OCR",
+    "modelNameHint": "If this model name is already on the platform it is reused; otherwise it is created.",
+    "description": "Description",
+    "descriptionPlaceholder": "How you produced these predictions...",
+    "modelLink": "Model link (optional)",
+    "modelLinkHint": "Any https link: Hugging Face, a paper, a GitHub repo or a vendor page.",
+    "name": "Name",
+    "promptNamePlaceholder": "e.g. Careful line-by-line transcriber",
+    "promptDescriptionPlaceholder": "What the prompt does and how to run it...",
+    "promptDescriptionHint": "Describe how to run your prompt: where the Input goes, the generation settings (temperature, max tokens, ...) and anything unusual, so others can reproduce it.",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Paste your prompt here...",
+    "promptHint": "Type or paste the prompt, or upload it as a file instead. It is saved as markdown.",
+    "usingPromptFile": "The uploaded file is used as the prompt. Remove it to type the prompt instead.",
+    "promptFileLabel": "Upload prompt file (.md, .txt)",
+    "skillNamePlaceholder": "e.g. Tibetan OCR skill",
+    "skillDescriptionPlaceholder": "What the skill does and how to run it...",
+    "skillDescriptionHint": "Describe how to run your skill: how to load it, where the Input goes, the generation settings (temperature, max tokens, ...) and anything unusual, so others can reproduce it.",
+    "skillFile": "Skill (zip)",
+    "skillFileLabel": "Upload skill zip",
+    "skillFileHint": "Any folder layout (SKILL.md is not required). Up to 10 MB zipped, 25 MB extracted and 200 files; only .md .txt .py .sh .js .ts .json .jsonl .yaml .yml .csv files, no symlinks.",
+    "removeFile": "Remove file",
+    "preferredModel": "Preferred Model",
+    "preferredModelPlaceholder": "e.g. gemini-2.5-pro",
+    "preferredModelHint": "The exact model id you ran it with, even if the platform has not seen it before.",
+    "license": "License",
+    "licenseHint": "How others may reuse your work.",
+    "predictionsFile": "Predictions File (JSONL)",
+    "predictionsHint": "One row per Input id, each {\"id\": ..., \"prediction\": ...}, like the template Predictions File in the Challenge Repo.",
+    "dropFile": "Drop your JSONL file here, or click to browse",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "loginToSubmit": "Login to Submit",
+    "loginPrompt": "Please log in to submit to this challenge.",
+    "loginConfirm": "You need to be logged in to submit. Would you like to log in now?",
+    "accepted": "Submission accepted",
+    "acceptedDesc": "It is being scored; its status updates below.",
+    "line": "line {{line}}",
+    "inputId": "id \"{{id}}\"",
+    "yourSubmissions": "Your Submissions to this Challenge",
+    "noneYet": "You have not submitted to this Challenge yet.",
+    "status": {
+      "pending": "Pending",
+      "processing": "Scoring",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "headlineMetric": "Headline Metric",
+    "details": "Details",
+    "scoringFailed": "Scoring failed",
+    "repoFolder": "View in the Challenge Repo",
+    "sync": {
+      "pending": "Publishing",
+      "synced": "Published",
+      "failed": "Publishing failed"
+    },
+    "syncPanelTitle": "All Submissions (admin)",
+    "syncPanelEmpty": "No Submissions yet.",
+    "resync": "Resync",
+    "resyncFailed": "Resync failed",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "deleteConfirm": "Delete \"{{name}}\"? It is removed from the leaderboard and the Challenge Repo and cannot be restored. Submissions cannot be edited: to correct one, delete it and submit again. It still counts toward today's limit of 10 Submissions.",
+    "deleted": "Submission deleted",
+    "deleteFailed": "Could not delete the Submission",
+    "limitReached": "You have reached today's limit of 10 Submissions to this Challenge.",
+    "limitResetsAt": "You can submit again from {{local}} your time ({{utc}} UTC)."
   }
 }

@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { challengeApi } from "../api/challenge";
 import type {
+  ApiResponse,
   SubmissionRequest,
+  UserSubmission,
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
@@ -72,13 +74,66 @@ export const useSubmission = (id: string) => {
   });
 };
 
-// Hook for fetching current user's submissions
-export const useUserSubmissions = () => {
+const userSubmissionsKey = ["userSubmissions"] as const;
+const preferredModelsKey = ["preferredModels"] as const;
+const SCORING_POLL_INTERVAL_MS = 3000;
+
+const isBeingScored = (submission: UserSubmission) =>
+  submission.status === "pending" || submission.status === "processing";
+
+// Scored, and its folder not yet in the Challenge Repo.
+const isBeingPublished = (submission: UserSubmission) =>
+  submission.status === "completed" && submission.sync_status === "pending";
+
+const isInProgress = (submission: UserSubmission) =>
+  isBeingScored(submission) || isBeingPublished(submission);
+
+// While any Submission is still being scored or published, refetch every few
+// seconds so statuses and repo links update in place.
+const pollWhileInProgress = (query: {
+  state: { data?: ApiResponse<UserSubmission[]> };
+}) =>
+  query.state.data?.data.some(isInProgress) ? SCORING_POLL_INTERVAL_MS : false;
+
+export const useUserSubmissions = ({ enabled = true } = {}) => {
   return useQuery({
-    queryKey: ["userSubmissions"],
+    queryKey: userSubmissionsKey,
     queryFn: challengeApi.getUserSubmissions,
+    enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: pollWhileInProgress,
+  });
+};
+
+const challengeSubmissionsKey = (challengeId: string) =>
+  ["challengeSubmissions", challengeId] as const;
+
+// Every Submission to a Challenge, for the admin sync view.
+export const useChallengeSubmissions = (
+  challengeId: string,
+  { enabled = true } = {}
+) => {
+  return useQuery({
+    queryKey: challengeSubmissionsKey(challengeId),
+    queryFn: () => challengeApi.getChallengeSubmissions(challengeId),
+    enabled: enabled && !!challengeId,
+    refetchInterval: pollWhileInProgress,
+  });
+};
+
+export const useResyncSubmission = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (submission: UserSubmission) =>
+      challengeApi.resyncSubmission(submission.id),
+    onSuccess: (_, submission) => {
+      queryClient.invalidateQueries({
+        queryKey: challengeSubmissionsKey(submission.challenge_id),
+      });
+      queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+    },
   });
 };
 
@@ -95,10 +150,8 @@ export const useSubmitToChallenge = () => {
         queryKey: challengeKeys.leaderboard(variables.challenge_id),
       });
 
-      // Invalidate user submissions (Note: teamName doesn't exist in SubmissionRequest)
-      queryClient.invalidateQueries({
-        queryKey: challengeKeys.userSubmissions(variables.challenge_id),
-      });
+      queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+      queryClient.invalidateQueries({ queryKey: preferredModelsKey });
 
       // Update challenge data (increment submission count)
       queryClient.invalidateQueries({
@@ -208,6 +261,16 @@ export const useScorers = () => {
   });
 };
 
+// Preferred Model ids already used on the platform, offered as autocomplete
+export const usePreferredModels = ({ enabled = true } = {}) => {
+  return useQuery({
+    queryKey: preferredModelsKey,
+    queryFn: challengeApi.getPreferredModels,
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 // Admin challenge creation hooks
 export const useCreateChallenge = () => {
   const queryClient = useQueryClient();
@@ -292,9 +355,14 @@ export const useDeleteSubmission = () => {
       queryClient.invalidateQueries({
         queryKey: ["submissions"],
       });
+      queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+      queryClient.invalidateQueries({ queryKey: preferredModelsKey });
 
       // If we have a specific challenge ID, invalidate and refetch its leaderboard immediately
       if (variables.challengeId) {
+        queryClient.invalidateQueries({
+          queryKey: challengeSubmissionsKey(variables.challengeId),
+        });
         queryClient.invalidateQueries({
           queryKey: challengeKeys.leaderboard(variables.challengeId),
         });

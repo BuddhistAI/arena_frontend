@@ -3,6 +3,7 @@ import type {
   Category,
   UserSubmission,
   SubmissionRequest,
+  SubmissionCreatedResponse,
   SubmissionResponse,
   LeaderboardResult,
   LeaderboardEntry,
@@ -32,24 +33,67 @@ export class ChallengeCreateError extends Error {
   }
 }
 
-const challengeCreateError = async (
+// A refused Submission: `message` is the summary, `errors` lists each
+// problem in the form or Predictions File when the backend reports them (422).
+export class SubmissionCreateError extends Error {
+  errors: ChallengeDataError[];
+
+  constructor(message: string, errors: ChallengeDataError[] = []) {
+    super(message);
+    this.name = "SubmissionCreateError";
+    this.errors = errors;
+  }
+}
+
+// The participant used today's Submissions to this Challenge (429);
+// `resetAt` is when they can submit again (the next 00:00 UTC).
+export class SubmissionLimitError extends Error {
+  resetAt: Date;
+
+  constructor(message: string, resetAt: Date) {
+    super(message);
+    this.name = "SubmissionLimitError";
+    this.resetAt = resetAt;
+  }
+}
+
+const submissionLimitError = async (
   response: Response
-): Promise<ChallengeCreateError> => {
-  const fallback = `Failed to create challenge (status ${response.status})`;
+): Promise<SubmissionLimitError> => {
+  const body = (await response.json().catch(() => ({}))) as {
+    detail?: unknown;
+    reset_at?: unknown;
+  };
+  const message =
+    typeof body.detail === "string"
+      ? body.detail
+      : "Daily Submission limit reached";
+  return new SubmissionLimitError(message, new Date(String(body.reset_at)));
+};
+
+interface ValidationFailure {
+  message: string;
+  errors: ChallengeDataError[];
+}
+
+const parseValidationFailure = async (
+  response: Response,
+  fallback: string
+): Promise<ValidationFailure> => {
   let body: unknown;
   try {
     body = await response.json();
   } catch {
-    return new ChallengeCreateError(fallback);
+    return { message: fallback, errors: [] };
   }
   const data = body as { detail?: unknown; errors?: unknown };
 
-  // Our validator: {"detail": "...", "errors": [{field, message, line, id}]}
+  // Our validators: {"detail": "...", "errors": [{field, message, line, id}]}
   if (Array.isArray(data.errors)) {
-    return new ChallengeCreateError(
-      typeof data.detail === "string" ? data.detail : fallback,
-      data.errors as ChallengeDataError[]
-    );
+    return {
+      message: typeof data.detail === "string" ? data.detail : fallback,
+      errors: data.errors as ChallengeDataError[],
+    };
   }
   // FastAPI's own validation: {"detail": [{loc, msg}]}
   if (Array.isArray(data.detail)) {
@@ -59,12 +103,22 @@ const challengeCreateError = async (
         message: item.msg ?? "Invalid value",
       })
     );
-    return new ChallengeCreateError("Some fields are missing or invalid.", errors);
+    return { message: "Some fields are missing or invalid.", errors };
   }
   if (typeof data.detail === "string") {
-    return new ChallengeCreateError(data.detail);
+    return { message: data.detail, errors: [] };
   }
-  return new ChallengeCreateError(fallback);
+  return { message: fallback, errors: [] };
+};
+
+const challengeCreateError = async (
+  response: Response
+): Promise<ChallengeCreateError> => {
+  const { message, errors } = await parseValidationFailure(
+    response,
+    `Failed to create challenge (status ${response.status})`
+  );
+  return new ChallengeCreateError(message, errors);
 };
 
 // Export the centralized auth token setter for backward compatibility
@@ -270,61 +324,66 @@ export const challengeApi = {
     }
   },
 
-  // Submit to challenge
+  // Submit to a challenge; resolves once accepted (202, pending)
   submitToChallenge: async (
     submission: SubmissionRequest
-  ): Promise<ApiResponse<SubmissionResponse>> => {
-    try {
-      const formData = new FormData();
-
-      // Add all fields to FormData
-      formData.append("file", submission.file);
-      formData.append("model_name", submission.model_name);
-      formData.append("challenge_id", submission.challenge_id);
-      formData.append("description", submission.description);
-
-      // Get headers without Content-Type (let browser set it for FormData)
-      const headers = await getAuthHeaders("none");
-
-      const response = await fetch(
-        `${API_BASE_URL}/submissions/create-submission`,
-        {
-          method: "POST",
-          headers,
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        // Try to parse error response body for detailed error message
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.detail && typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail;
-          } else if (errorData.message && typeof errorData.message === 'string') {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          // If parsing fails, keep the generic error message
-          console.warn("Failed to parse error response:", parseError);
-        }
-        throw new Error(errorMessage);
+  ): Promise<ApiResponse<SubmissionCreatedResponse>> => {
+    const formData = new FormData();
+    formData.append("challenge_id", submission.challenge_id);
+    formData.append("type", submission.type);
+    formData.append("name", submission.name);
+    formData.append("description", submission.description);
+    const optionalFields = {
+      model_link: submission.model_link,
+      preferred_model: submission.preferred_model,
+      license: submission.license,
+      prompt_text: submission.prompt_text,
+    };
+    for (const [field, value] of Object.entries(optionalFields)) {
+      if (value) {
+        formData.append(field, value);
       }
+    }
+    if (submission.prompt_file) {
+      formData.append("prompt_file", submission.prompt_file);
+    }
+    if (submission.skill_file) {
+      formData.append("skill_file", submission.skill_file);
+    }
+    formData.append("predictions_file", submission.predictions_file);
 
-      const result = await response.json();
+    // Get headers without Content-Type (let browser set it for FormData)
+    const headers = await getAuthHeaders("none");
 
-      return {
-        data: result,
-        message: "Submission successful! Your results are being processed.",
-        success: true,
-      };
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/submissions/create-submission`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
     } catch (error) {
       console.error("Error submitting to challenge:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to submit to challenge"
-      );
+      throw new Error("Could not reach the server to submit");
     }
+
+    if (response.status === 429) {
+      throw await submissionLimitError(response);
+    }
+    if (!response.ok) {
+      const { message, errors } = await parseValidationFailure(
+        response,
+        `Failed to submit (status ${response.status})`
+      );
+      throw new SubmissionCreateError(message, errors);
+    }
+
+    const created: SubmissionCreatedResponse = await response.json();
+    return {
+      data: created,
+      message: created.message,
+      success: true,
+    };
   },
 
   // Get all categories
@@ -407,6 +466,16 @@ export const challengeApi = {
     const response = await fetch(`${API_BASE_URL}/scorers`, { headers });
     if (!response.ok) {
       throw new Error(`Failed to load scorers (status ${response.status})`);
+    }
+    return response.json();
+  },
+
+  // Preferred Model ids already used on Submissions, sorted
+  getPreferredModels: async (): Promise<string[]> => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/submissions/preferred-models`, { headers });
+    if (!response.ok) {
+      throw new Error(`Failed to load preferred models (status ${response.status})`);
     }
     return response.json();
   },
@@ -580,6 +649,46 @@ export const challengeApi = {
         error instanceof Error ? error.message : "Failed to delete submission"
       );
     }
+  },
+
+  // Every Submission to one Challenge, for the admin sync view
+  getChallengeSubmissions: async (
+    challengeId: string
+  ): Promise<ApiResponse<UserSubmission[]>> => {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams({ challenge_id: challengeId });
+    const response = await fetch(`${API_BASE_URL}/submissions?${query}`, {
+      headers,
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch submissions (status ${response.status})`);
+    }
+    const submissions: UserSubmission[] = await response.json();
+    return {
+      data: submissions,
+      message: "Challenge submissions fetched successfully",
+      success: true,
+    };
+  },
+
+  // Resync a Submission's repo folder (admin only); answers it `pending`
+  resyncSubmission: async (
+    submissionId: string
+  ): Promise<ApiResponse<UserSubmission>> => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_BASE_URL}/submissions/${submissionId}/resync`,
+      { method: "POST", headers }
+    );
+    if (!response.ok) {
+      const { message } = await parseValidationFailure(
+        response,
+        `Failed to resync submission (status ${response.status})`
+      );
+      throw new Error(message);
+    }
+    const submission: UserSubmission = await response.json();
+    return { data: submission, message: "Resync queued", success: true };
   },
 
   // Get leaderboard results (deprecated - use individual challenge endpoints)
