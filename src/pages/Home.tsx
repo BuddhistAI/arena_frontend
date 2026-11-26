@@ -21,7 +21,6 @@ const Home = () => {
   const challenges = challengesResponse?.data || [];
   const user = currentUserData?.data;
   const isAdmin = user?.role === "admin";
-  const repoUrl = "https://github.com/OpenPecha/EvalAI_dataset/blob/main/";
   const handleMouseEnter = (challengeId: string) => {
     // Prefetch leaderboard data on hover for better UX
     prefetchLeaderboard(challengeId);
@@ -210,16 +209,16 @@ const Home = () => {
                       </Link>
                     )}
                     
-                    {/* Dataset Download Button */}
+                    {/* Challenge Repo Button */}
                     <a
-                      href={repoUrl + challenge.title.toLowerCase() + "_dataset"}//lower the title and add dataset to the url 
+                      href={challenge.repo_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full flex items-center justify-center px-3 py-2 mt-2 border border-neutral-300 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 text-sm rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200 group"
                     >
                       <Github className="w-3 h-3 mr-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
                       <span className="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                        View dataset
+                        Challenge Repo
                       </span>
                       <ExternalLink className="w-3 h-3 ml-2 opacity-60 group-hover:opacity-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-all" />
                     </a>

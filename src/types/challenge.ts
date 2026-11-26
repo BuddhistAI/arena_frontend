@@ -19,6 +19,9 @@ export interface Challenge {
   created_at: string;
   updated_at: string;
   category: Category;
+  repo_name: string;
+  repo_url: string;
+  sync_status: "pending" | "synced" | "failed";
   // Keep some legacy fields for backward compatibility
   name?: string;
   startDate?: string;
