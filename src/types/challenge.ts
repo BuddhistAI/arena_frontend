@@ -39,6 +39,10 @@ export type SubmissionType = "model" | "prompt" | "skill";
 
 export type SubmissionStatus = "pending" | "processing" | "completed" | "failed";
 
+// The licenses a Prompt or Skill may carry (SPDX ids); the backend refuses others.
+export const SUBMISSION_LICENSES = ["CC-BY-4.0", "CC0-1.0", "MIT", "Apache-2.0"] as const;
+export type SubmissionLicense = (typeof SUBMISSION_LICENSES)[number];
+
 // A Submission as GET /submissions/{id} and /submissions/my return it.
 // `headline_metric` is unrounded; round it only for display.
 export interface UserSubmission {
@@ -50,6 +54,8 @@ export interface UserSubmission {
   description: string | null;
   model_id: string | null;
   model_link: string | null;
+  preferred_model: string | null;
+  license: SubmissionLicense | null;
   status: SubmissionStatus;
   status_message: string | null;
   headline_metric: number | null;
@@ -80,6 +86,11 @@ export interface SubmissionRequest {
   name: string;
   description: string;
   model_link?: string;
+  // Prompt only. Send the prompt as `prompt_text` or `prompt_file`, not both.
+  preferred_model?: string;
+  license?: SubmissionLicense;
+  prompt_text?: string;
+  prompt_file?: File;
   predictions_file: File;
 }
 

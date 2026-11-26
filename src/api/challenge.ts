@@ -307,8 +307,19 @@ export const challengeApi = {
     formData.append("type", submission.type);
     formData.append("name", submission.name);
     formData.append("description", submission.description);
-    if (submission.model_link) {
-      formData.append("model_link", submission.model_link);
+    const optionalFields = {
+      model_link: submission.model_link,
+      preferred_model: submission.preferred_model,
+      license: submission.license,
+      prompt_text: submission.prompt_text,
+    };
+    for (const [field, value] of Object.entries(optionalFields)) {
+      if (value) {
+        formData.append(field, value);
+      }
+    }
+    if (submission.prompt_file) {
+      formData.append("prompt_file", submission.prompt_file);
     }
     formData.append("predictions_file", submission.predictions_file);
 
