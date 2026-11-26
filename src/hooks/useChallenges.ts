@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { challengeApi } from "../api/challenge";
 import type {
   ApiResponse,
@@ -7,6 +12,7 @@ import type {
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
+  LeaderboardFilter,
 } from "../types/challenge";
 
 // Query keys
@@ -17,8 +23,8 @@ export const challengeKeys = {
   details: () => [...challengeKeys.all, "detail"] as const,
   detail: (id: string) => [...challengeKeys.details(), id] as const,
   leaderboards: () => [...challengeKeys.all, "leaderboard"] as const,
-  leaderboard: (challengeId: string, page?: number) =>
-    [...challengeKeys.leaderboards(), challengeId, page] as const,
+  leaderboard: (challengeId: string, page?: number, filter: LeaderboardFilter = {}) =>
+    [...challengeKeys.leaderboards(), challengeId, page, filter] as const,
   submissions: () => [...challengeKeys.all, "submissions"] as const,
   userSubmissions: (challengeId: string, teamName?: string) =>
     [...challengeKeys.submissions(), challengeId, teamName] as const,
@@ -51,11 +57,17 @@ export const useChallenge = (id: string) => {
 };
 
 // Hooks for leaderboards: one page of a Challenge's server-ranked Leaderboard
-export const useLeaderboard = (challengeId: string, page: number = 1) => {
+export const useLeaderboard = (
+  challengeId: string,
+  page: number = 1,
+  filter: LeaderboardFilter = {}
+) => {
   return useQuery({
-    queryKey: challengeKeys.leaderboard(challengeId, page),
-    queryFn: () => challengeApi.getRankedLeaderboard(challengeId, page),
+    queryKey: challengeKeys.leaderboard(challengeId, page, filter),
+    queryFn: () => challengeApi.getRankedLeaderboard(challengeId, page, filter),
     enabled: !!challengeId,
+    // Keep showing the last rows while a new tab, search or page loads.
+    placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000, // 2 minutes - leaderboards update more frequently
     gcTime: 5 * 60 * 1000,
   });

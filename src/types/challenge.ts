@@ -186,8 +186,24 @@ export interface LeaderboardRow {
   has_download: boolean;
 }
 
+// How many rows the whole Leaderboard holds, in all and per Submission Type,
+// whatever the type filter, search and page.
+export interface LeaderboardCounts {
+  all: number;
+  model: number;
+  prompt: number;
+  skill: number;
+}
+
+// Which rows of a Leaderboard to show. Neither changes a row's Rank.
+export interface LeaderboardFilter {
+  type?: SubmissionType; // omitted for All
+  q?: string; // matches name, submitter or Preferred Model, ignoring case
+}
+
 export interface RankedLeaderboard {
   scorer: LeaderboardScorer;
+  counts: LeaderboardCounts;
   page: number;
   limit: number;
   rows: LeaderboardRow[];

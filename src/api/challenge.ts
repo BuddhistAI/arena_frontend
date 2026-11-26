@@ -7,6 +7,7 @@ import type {
   SubmissionResponse,
   LeaderboardResult,
   LeaderboardEntry,
+  LeaderboardFilter,
   RankedLeaderboard,
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
@@ -225,9 +226,12 @@ export const challengeApi = {
   getRankedLeaderboard: async (
     challengeId: string,
     page: number = 1,
+    filter: LeaderboardFilter = {},
     limit: number = 25
   ): Promise<RankedLeaderboard> => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (filter.type) params.set("type", filter.type);
+    if (filter.q?.trim()) params.set("q", filter.q.trim());
     const response = await fetch(
       `${API_BASE_URL}/challenges/${challengeId}/leaderboard?${params}`,
       { headers: { accept: "application/json" } }
