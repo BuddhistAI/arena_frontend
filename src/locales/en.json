@@ -364,7 +364,7 @@
     "license": "License",
     "licenseHint": "How others may reuse your work.",
     "predictionsFile": "Predictions File (JSONL)",
-    "predictionsHint": "One row per Input id, each {\"id\": ..., \"prediction\": ...}, like the Challenge's sample submission.",
+    "predictionsHint": "One row per Input id, each {\"id\": ..., \"prediction\": ...}, like the template Predictions File in the Challenge Repo.",
     "dropFile": "Drop your JSONL file here, or click to browse",
     "submit": "Submit",
     "submitting": "Submitting...",
