@@ -48,7 +48,7 @@ export type SubmissionStatus = "pending" | "processing" | "completed" | "failed"
 export const SUBMISSION_LICENSES = ["CC-BY-4.0", "CC0-1.0", "MIT", "Apache-2.0"] as const;
 export type SubmissionLicense = (typeof SUBMISSION_LICENSES)[number];
 
-// A Submission as GET /submissions/{id} and /submissions/my return it.
+// A Submission as /submissions/my and the admin listing return it.
 // `headline_metric` is unrounded; round it only for display.
 export interface UserSubmission {
   id: string;
@@ -71,6 +71,34 @@ export interface UserSubmission {
   sync_status: SyncStatus;
   created_at: string;
   updated_at: string;
+}
+
+// GET /submissions/{id}: everything public about one Submission, for its
+// detail page. A scored one is public; one pending, processing or failed
+// reaches only its submitter and admins. Never holds per-item scores.
+export interface SubmissionDetailView {
+  id: string;
+  challenge_id: string;
+  // Its Rank on the Challenge's Leaderboard; null until scored.
+  rank: number | null;
+  type: SubmissionType;
+  name: string;
+  submitter: string;
+  created_at: string;
+  description: string | null;
+  status: SubmissionStatus;
+  status_message: string | null;
+  scorer: LeaderboardScorer;
+  headline_metric: number | null;
+  public_summary: PublicSummaryValue[] | null;
+  model_link: string | null;
+  preferred_model: string | null;
+  license: SubmissionLicense | null;
+  sync_status: SyncStatus;
+  // The Submission's folder in the Challenge Repo on GitHub; null until synced.
+  repo_url: string | null;
+  // Prompt only: the prompt's text.
+  prompt_text: string | null;
 }
 
 // Legacy submission interface (keeping for compatibility)

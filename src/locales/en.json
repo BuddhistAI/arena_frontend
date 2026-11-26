@@ -404,5 +404,28 @@
     "deleteFailed": "Could not delete the Submission",
     "limitReached": "You have reached today's limit of 10 Submissions to this Challenge.",
     "limitResetsAt": "You can submit again from {{local}} your time ({{utc}} UTC)."
+  },
+  "submissionDetail": {
+    "back": "Back to Leaderboard",
+    "loading": "Loading Submission...",
+    "deleted": "This Submission was deleted",
+    "notFound": "Submission not found",
+    "notFoundDesc": "It does not exist, or it is not scored yet and is not yours.",
+    "loadFailed": "Could not load the Submission. Please try again later.",
+    "rank": "Rank",
+    "submittedBy": "by @{{submitter}}",
+    "submittedOn": "submitted {{date}}",
+    "description": "Description",
+    "noDescription": "No description.",
+    "score": "Score",
+    "details": "Details",
+    "modelLink": "Model link",
+    "repoFolder": "Challenge Repo",
+    "prompt": "Prompt",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Could not copy the prompt",
+    "syncFailed": "Publishing to the Challenge Repo failed.",
+    "resyncQueued": "Resync queued"
   }
 }

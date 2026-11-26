@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { challengeApi } from "../api/challenge";
+import { challengeApi, SubmissionReadError } from "../api/challenge";
 import type {
   ApiResponse,
   SubmissionRequest,
@@ -73,12 +73,17 @@ export const useLeaderboard = (
   });
 };
 
-export const useSubmission = (id: string) => {
+// One Submission's detail page. A missing (404) or deleted (410) Submission
+// is an answer, not a failure, so it is not retried.
+export const useSubmissionDetail = (id: string) => {
   return useQuery({
     queryKey: challengeKeys.submission(id),
-    queryFn: () => challengeApi.getSubmissionById(id),
+    queryFn: () => challengeApi.getSubmissionDetail(id),
     enabled: !!id,
-    staleTime: 30 * 1000, // 30 seconds - submission status might change
+    staleTime: 30 * 1000, // 30 seconds - its status or sync may change
+    retry: (failureCount, error) =>
+      !(error instanceof SubmissionReadError && [404, 410].includes(error.status)) &&
+      failureCount < 3,
   });
 };
 
@@ -134,13 +139,16 @@ export const useResyncSubmission = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (submission: UserSubmission) =>
+    mutationFn: (submission: Pick<UserSubmission, "id" | "challenge_id">) =>
       challengeApi.resyncSubmission(submission.id),
     onSuccess: (_, submission) => {
       queryClient.invalidateQueries({
         queryKey: challengeSubmissionsKey(submission.challenge_id),
       });
       queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+      queryClient.invalidateQueries({
+        queryKey: challengeKeys.submission(submission.id),
+      });
     },
   });
 };
@@ -333,16 +341,6 @@ export const useMySubmissions = () => {
   return useQuery({
     queryKey: ["submissions", "my"],
     queryFn: challengeApi.getMySubmissions,
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-export const useSubmissionById = (submissionId: string) => {
-  return useQuery({
-    queryKey: ["submissions", "detail", submissionId],
-    queryFn: () => challengeApi.getSubmissionById(submissionId),
-    enabled: !!submissionId,
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
   });

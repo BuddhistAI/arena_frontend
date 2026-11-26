@@ -5,6 +5,7 @@ import type {
   SubmissionRequest,
   SubmissionCreatedResponse,
   SubmissionResponse,
+  SubmissionDetailView,
   LeaderboardResult,
   LeaderboardEntry,
   LeaderboardFilter,
@@ -44,6 +45,24 @@ export class SubmissionCreateError extends Error {
     super(message);
     this.name = "SubmissionCreateError";
     this.errors = errors;
+  }
+}
+
+// A Submission that could not be read: 404 when it does not exist or the
+// viewer may not see it, 410 when it was deleted.
+export class SubmissionReadError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(
+      status === 410
+        ? "This Submission was deleted"
+        : status === 404
+          ? "Submission not found"
+          : `Failed to load the Submission (status ${status})`
+    );
+    this.name = "SubmissionReadError";
+    this.status = status;
   }
 }
 
@@ -613,38 +632,19 @@ export const challengeApi = {
     }
   },
 
-  // Get submission by ID
-  getSubmissionById: async (
+  // Everything public about one Submission, for its detail page. Signed in,
+  // the submitter and admins also get it while unscored or failed.
+  getSubmissionDetail: async (
     submissionId: string
-  ): Promise<ApiResponse<SubmissionResponse>> => {
-    try {
-      const headers = await getAuthHeaders();
-
-      const response = await fetch(
-        `${API_BASE_URL}/submissions/${submissionId}`,
-        {
-          method: "GET",
-          headers,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const submission = await response.json();
-
-      return {
-        data: submission,
-        message: "Submission fetched successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error fetching submission:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to fetch submission"
-      );
+  ): Promise<SubmissionDetailView> => {
+    const headers = await getAuthHeaders("none");
+    const response = await fetch(`${API_BASE_URL}/submissions/${submissionId}`, {
+      headers,
+    });
+    if (!response.ok) {
+      throw new SubmissionReadError(response.status);
     }
+    return response.json();
   },
 
   // Delete submission by ID
