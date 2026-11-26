@@ -19,6 +19,7 @@ import {
   SubmissionScore,
   SubmissionStatusBadge,
 } from "../components/SubmissionSummary";
+import DeleteSubmissionButton from "../components/DeleteSubmissionButton";
 import {
   SUBMISSION_LICENSES,
   type ChallengeDataError,
@@ -852,10 +853,16 @@ const Submission = () => {
                       </span>
                     </div>
                     <SubmissionScore submission={submission} />
-                    <SubmissionRepoLink
-                      submission={submission}
-                      repoUrl={challenge?.repo_url}
-                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <SubmissionRepoLink
+                        submission={submission}
+                        repoUrl={challenge?.repo_url}
+                      />
+                      <DeleteSubmissionButton
+                        submission={submission}
+                        className="ml-auto"
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>

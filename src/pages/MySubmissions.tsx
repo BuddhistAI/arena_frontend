@@ -8,6 +8,7 @@ import {
   SubmissionScore,
   SubmissionStatusBadge,
 } from "../components/SubmissionSummary";
+import DeleteSubmissionButton from "../components/DeleteSubmissionButton";
 import type { UserSubmission } from "../types/challenge";
 
 const MySubmissions = () => {
@@ -215,6 +216,9 @@ const MySubmissions = () => {
                           <Trophy className="w-4 h-4 mr-1" />
                           View Leaderboard
                         </Link>
+                      </div>
+                      <div className="mt-2">
+                        <DeleteSubmissionButton submission={submission} />
                       </div>
                     </div>
                   </div>

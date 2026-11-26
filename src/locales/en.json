@@ -392,10 +392,15 @@
       "synced": "Published",
       "failed": "Publishing failed"
     },
-    "syncPanelTitle": "Submissions in the Challenge Repo",
-    "syncPanelEmpty": "No scored Submissions yet.",
+    "syncPanelTitle": "All Submissions (admin)",
+    "syncPanelEmpty": "No Submissions yet.",
     "resync": "Resync",
     "resyncFailed": "Resync failed",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "deleteConfirm": "Delete \"{{name}}\"? It is removed from the leaderboard and the Challenge Repo and cannot be restored. Submissions cannot be edited: to correct one, delete it and submit again. It still counts toward today's limit of 10 Submissions.",
+    "deleted": "Submission deleted",
+    "deleteFailed": "Could not delete the Submission",
     "limitReached": "You have reached today's limit of 10 Submissions to this Challenge.",
     "limitResetsAt": "You can submit again from {{local}} your time ({{utc}} UTC)."
   }

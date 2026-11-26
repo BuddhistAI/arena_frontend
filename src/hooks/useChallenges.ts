@@ -353,9 +353,14 @@ export const useDeleteSubmission = () => {
       queryClient.invalidateQueries({
         queryKey: ["submissions"],
       });
+      queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+      queryClient.invalidateQueries({ queryKey: preferredModelsKey });
 
       // If we have a specific challenge ID, invalidate and refetch its leaderboard immediately
       if (variables.challengeId) {
+        queryClient.invalidateQueries({
+          queryKey: challengeSubmissionsKey(variables.challengeId),
+        });
         queryClient.invalidateQueries({
           queryKey: challengeKeys.leaderboard(variables.challengeId),
         });
