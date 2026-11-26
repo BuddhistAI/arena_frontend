@@ -6,33 +6,179 @@ import {
   useCategories,
   useCreateChallenge,
   useCreateCategory,
+  useScorers,
 } from "../hooks/useChallenges";
-import type { ChallengeCreateRequest } from "../types/challenge";
+import { ChallengeCreateError } from "../api/challenge";
+import type {
+  ChallengeCreateRequest,
+  ChallengeDataError,
+  Scorer,
+  ScorerParameter,
+} from "../types/challenge";
+
+type Details = Pick<
+  ChallengeCreateRequest,
+  "title" | "category_id" | "image_uri" | "description" | "status"
+>;
+
+// What the admin has typed for each Scorer parameter, before conversion.
+type ParamValues = Record<string, string | boolean>;
+
+const inputClass =
+  "w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+const labelClass =
+  "block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2";
+const hintClass = "text-xs text-neutral-500 dark:text-neutral-400 mt-1";
+
+const FIELD_LABELS: Record<string, string> = {
+  title: "Title",
+  category_id: "Category",
+  scorer_name: "Scorer",
+  scorer_params: "Scorer parameters",
+  inputs_file: "Inputs",
+  ground_truth_file: "Ground Truth",
+  media_archive_file: "Media Archive",
+};
+
+const directionLabel = (scorer: Scorer) =>
+  scorer.direction === "lower_is_better"
+    ? "lower is better"
+    : "higher is better";
+
+const parameterEntries = (scorer?: Scorer) =>
+  Object.entries(scorer?.parameter_schema.properties ?? {});
+
+const defaultParamValues = (scorer?: Scorer): ParamValues =>
+  Object.fromEntries(
+    parameterEntries(scorer).map(([name, param]) => [
+      name,
+      param.type === "boolean"
+        ? Boolean(param.default)
+        : param.default === undefined || param.default === null
+          ? ""
+          : String(param.default),
+    ])
+  );
+
+// Turn the typed values into the JSON the backend validates. Blank fields are
+// left out so the Scorer's own default applies.
+const toScorerParams = (
+  scorer: Scorer | undefined,
+  values: ParamValues
+): Record<string, unknown> => {
+  const params: Record<string, unknown> = {};
+  for (const [name, param] of parameterEntries(scorer)) {
+    const value = values[name];
+    if (param.type === "boolean") {
+      params[name] = Boolean(value);
+    } else if (typeof value === "string" && value.trim() !== "") {
+      params[name] =
+        param.type === "number" || param.type === "integer"
+          ? Number(value)
+          : value.trim();
+    }
+  }
+  return params;
+};
+
+const numberBounds = (param: ScorerParameter) => ({
+  min: param.minimum ?? param.exclusiveMinimum,
+  max: param.maximum ?? param.exclusiveMaximum,
+  step: param.type === "integer" ? 1 : "any",
+});
+
+interface FileFieldProps {
+  id: string;
+  label: string;
+  hint: string;
+  accept: string;
+  file: File | undefined;
+  onChange: (file: File | undefined) => void;
+}
+
+const FileField = ({ id, label, hint, accept, file, onChange }: FileFieldProps) => (
+  <div>
+    <label htmlFor={id} className={labelClass}>
+      {label}
+    </label>
+    {file ? (
+      <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-700 rounded-lg border border-neutral-300 dark:border-neutral-600">
+        <div className="flex items-center space-x-3">
+          <Upload className="w-5 h-5 text-neutral-500" />
+          <div>
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-100">
+              {file.name}
+            </p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              {(file.size / 1024 / 1024).toFixed(2)} MB
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          aria-label={`Remove ${label}`}
+          className="p-1 text-red-600 hover:text-red-700 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    ) : (
+      <div className="border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-lg p-5 text-center">
+        <input
+          type="file"
+          id={id}
+          onChange={(e) => onChange(e.target.files?.[0])}
+          className="hidden"
+          accept={accept}
+        />
+        <label htmlFor={id} className="cursor-pointer flex flex-col items-center">
+          <Upload className="w-7 h-7 text-neutral-400 mb-2" />
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Click to upload
+          </p>
+        </label>
+      </div>
+    )}
+    <p className={hintClass}>{hint}</p>
+  </div>
+);
 
 const CreateChallenge = () => {
   const navigate = useNavigate();
   const { data: currentUserData } = useCurrentUser();
   const { data: categoriesData, isLoading: categoriesLoading } =
     useCategories();
+  const {
+    data: scorers = [],
+    isLoading: scorersLoading,
+    error: scorersError,
+  } = useScorers();
   const createChallengeMutation = useCreateChallenge();
   const createCategoryMutation = useCreateCategory();
-  const [formData, setFormData] = useState<ChallengeCreateRequest>({
+
+  const [details, setDetails] = useState<Details>({
     title: "",
     category_id: "",
     image_uri: "",
     description: "",
-    status: "upcoming",
-    ground_truth_file: undefined,
+    status: "active",
   });
+  const [scorerName, setScorerName] = useState("");
+  const [paramValues, setParamValues] = useState<ParamValues>({});
+  const [inputsFile, setInputsFile] = useState<File>();
+  const [groundTruthFile, setGroundTruthFile] = useState<File>();
+  const [mediaArchiveFile, setMediaArchiveFile] = useState<File>();
 
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [challengeError, setChallengeError] = useState("");
+  const [dataErrors, setDataErrors] = useState<ChallengeDataError[]>([]);
   const [categoryError, setCategoryError] = useState("");
 
   const user = currentUserData?.data;
   const categories = categoriesData?.data || [];
+  const scorer = scorers.find((s) => s.name === scorerName);
 
   // Check if user is admin
   const isAdmin = user?.role === "admin";
@@ -58,56 +204,56 @@ const CreateChallenge = () => {
     );
   }
 
-  const handleInputChange = (
+  const clearErrors = () => {
+    if (challengeError) setChallengeError("");
+    if (dataErrors.length) setDataErrors([]);
+  };
+
+  const handleDetailChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    
-    // Clear errors when user starts typing
-    if (challengeError) setChallengeError("");
+    setDetails((prev) => ({ ...prev, [name]: value }));
+    clearErrors();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setFormData((prev) => ({ ...prev, ground_truth_file: file }));
-    }
+  const handleScorerChange = (name: string) => {
+    setScorerName(name);
+    setParamValues(defaultParamValues(scorers.find((s) => s.name === name)));
+    clearErrors();
   };
+
+  const handleParamChange = (name: string, value: string | boolean) => {
+    setParamValues((prev) => ({ ...prev, [name]: value }));
+    clearErrors();
+  };
+
+  const withClear =
+    (setter: (file: File | undefined) => void) => (file: File | undefined) => {
+      setter(file);
+      clearErrors();
+    };
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
 
-    setCategoryError(""); // Clear previous errors
+    setCategoryError("");
 
     try {
       const result = await createCategoryMutation.mutateAsync({
         name: newCategoryName.trim(),
       });
-
-      // Select the newly created category
-      setFormData((prev) => ({ ...prev, category_id: result.data.id }));
+      setDetails((prev) => ({ ...prev, category_id: result.data.id }));
       setNewCategoryName("");
       setShowNewCategoryForm(false);
     } catch (error) {
-      let errorMessage = "Failed to create category. Please try again.";
-      
-      // Extract error message from different error formats
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        // Handle API response errors with detail property
-        if ('detail' in error && typeof error.detail === 'string') {
-          errorMessage = error.detail;
-        } else if ('message' in error && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
-      }
-      
-      setCategoryError(errorMessage);
+      setCategoryError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create category. Please try again."
+      );
       console.error("Failed to create category:", error);
     }
   };
@@ -115,41 +261,48 @@ const CreateChallenge = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.category_id || !formData.description) {
-      setChallengeError("Please fill in all required fields");
+    if (
+      !details.title ||
+      !details.category_id ||
+      !details.description ||
+      !scorer ||
+      !inputsFile ||
+      !groundTruthFile
+    ) {
+      setChallengeError(
+        "Please fill in all required fields: title, category, description, scorer, Inputs and Ground Truth."
+      );
       return;
     }
 
-    setChallengeError(""); // Clear previous errors
+    clearErrors();
 
     try {
-      await createChallengeMutation.mutateAsync(formData);
-      navigate("/"); // Redirect to home page after successful creation
+      await createChallengeMutation.mutateAsync({
+        ...details,
+        scorer_name: scorer.name,
+        scorer_params: toScorerParams(scorer, paramValues),
+        inputs_file: inputsFile,
+        ground_truth_file: groundTruthFile,
+        media_archive_file: mediaArchiveFile,
+      });
+      navigate("/");
     } catch (error) {
-      let errorMessage = "Failed to create challenge. Please try again.";
-      
-      // Extract error message from different error formats
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        // Handle API response errors with detail property
-        if ('detail' in error && typeof error.detail === 'string') {
-          errorMessage = error.detail;
-        } else if ('message' in error && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
+      if (error instanceof ChallengeCreateError) {
+        setChallengeError(error.message);
+        setDataErrors(error.errors);
+      } else {
+        setChallengeError(
+          error instanceof Error
+            ? error.message
+            : "Failed to create challenge. Please try again."
+        );
       }
-      
-      setChallengeError(errorMessage);
       console.error("Failed to create challenge:", error);
     }
   };
-  const removeFile = () => {
-    setSelectedFile(null);
-    setFormData((prev) => ({ ...prev, ground_truth_file: undefined }));
-  };
 
-  if (categoriesLoading) {
+  if (categoriesLoading || scorersLoading) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="animate-pulse">
@@ -172,46 +325,46 @@ const CreateChallenge = () => {
             Create New Challenge
           </h1>
           <p className="text-neutral-600 dark:text-neutral-400">
-            Create a new challenge for participants to compete in
+            Upload the Inputs participants run inference on and the private
+            Ground Truth, and pick the Scorer that ranks every submission. A
+            public GitHub repo is created for the challenge.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-            >
+            <label htmlFor="title" className={labelClass}>
               Challenge Title *
             </label>
             <input
               type="text"
               id="title"
               name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={details.title}
+              onChange={handleDetailChange}
+              className={inputClass}
               placeholder="Enter challenge title"
               required
             />
+            <p className={hintClass}>
+              Also names the challenge's GitHub repo, which keeps its name if
+              the title changes later.
+            </p>
           </div>
 
           {/* Category */}
           <div>
-            <label
-              htmlFor="category_id"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-            >
+            <label htmlFor="category_id" className={labelClass}>
               Category *
             </label>
             <div className="flex space-x-2">
               <select
                 id="category_id"
                 name="category_id"
-                value={formData.category_id}
-                onChange={handleInputChange}
-                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={details.category_id}
+                onChange={handleDetailChange}
+                className={`flex-1 ${inputClass}`}
                 required
               >
                 <option value="">Select a category</option>
@@ -224,13 +377,13 @@ const CreateChallenge = () => {
               <button
                 type="button"
                 onClick={() => setShowNewCategoryForm(!showNewCategoryForm)}
+                aria-label="Add a category"
                 className="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 transition-colors flex items-center"
               >
                 <Plus className="w-4 h-4" />
               </button>
             </div>
 
-            {/* New Category Form */}
             {showNewCategoryForm && (
               <div className="mt-3 p-4 bg-neutral-50 dark:bg-neutral-700 rounded-lg">
                 <div className="flex space-x-2">
@@ -270,11 +423,12 @@ const CreateChallenge = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                {/* Category Creation Error */}
                 {categoryError && (
                   <div className="mt-2 flex items-center p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mr-2" />
-                    <p className="text-sm text-red-800 dark:text-red-400">{categoryError}</p>
+                    <p className="text-sm text-red-800 dark:text-red-400">
+                      {categoryError}
+                    </p>
                   </div>
                 )}
               </div>
@@ -283,126 +437,212 @@ const CreateChallenge = () => {
 
           {/* Image URI */}
           <div>
-            <label
-              htmlFor="image_uri"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-            >
+            <label htmlFor="image_uri" className={labelClass}>
               Challenge Image URL
             </label>
             <input
               type="url"
               id="image_uri"
               name="image_uri"
-              value={formData.image_uri}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={details.image_uri}
+              onChange={handleDetailChange}
+              className={inputClass}
               placeholder="https://example.com/image.jpg"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-            >
+            <label htmlFor="description" className={labelClass}>
               Description *
             </label>
             <textarea
               id="description"
               name="description"
-              value={formData.description}
-              onChange={handleInputChange}
+              value={details.description}
+              onChange={handleDetailChange}
               rows={4}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Describe the challenge objectives, rules, and evaluation criteria"
+              className={inputClass}
+              placeholder="Describe the challenge objectives and rules"
               required
             />
           </div>
 
           {/* Status */}
           <div>
-            <label
-              htmlFor="status"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-            >
+            <label htmlFor="status" className={labelClass}>
               Status *
             </label>
             <select
               id="status"
               name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={details.status}
+              onChange={handleDetailChange}
+              className={inputClass}
               required
             >
-              <option value="upcoming">Upcoming</option>
               <option value="active">Active</option>
+              <option value="upcoming">Upcoming</option>
               <option value="completed">Completed</option>
             </select>
           </div>
 
-          {/* Ground Truth File */}
-          <div>
-            <label
-              htmlFor="ground_truth_file"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-            >
-              Ground Truth File (Optional)
-            </label>
+          {/* Scorer */}
+          <fieldset className="space-y-4 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+            <legend className="text-lg font-semibold text-neutral-700 dark:text-neutral-100">
+              Scoring
+            </legend>
+            <div>
+              <label htmlFor="scorer_name" className={labelClass}>
+                Scorer *
+              </label>
+              {scorersError ? (
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  Could not load scorers:{" "}
+                  {scorersError instanceof Error
+                    ? scorersError.message
+                    : "unknown error"}
+                </p>
+              ) : (
+                <select
+                  id="scorer_name"
+                  value={scorerName}
+                  onChange={(e) => handleScorerChange(e.target.value)}
+                  className={inputClass}
+                  required
+                >
+                  <option value="">Select a scorer</option>
+                  {scorers.map((s) => (
+                    <option key={s.name} value={s.name}>
+                      {s.label} ({directionLabel(s)})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p className={hintClass}>
+                Locked once the first submission arrives. Until then you can
+                change it.
+              </p>
+            </div>
 
-            {selectedFile ? (
-              <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-700 rounded-lg border border-neutral-300 dark:border-neutral-600">
-                <div className="flex items-center space-x-3">
-                  <Upload className="w-5 h-5 text-neutral-500" />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-100">
-                      {selectedFile.name}
-                    </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={removeFile}
-                  className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  id="ground_truth_file"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept=".json,.txt,.csv"
-                />
-                <label
-                  htmlFor="ground_truth_file"
-                  className="cursor-pointer flex flex-col items-center"
-                >
-                  <Upload className="w-8 h-8 text-neutral-400 mb-2" />
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    Click to upload ground truth file
+            {parameterEntries(scorer).map(([name, param]) => (
+              <div key={name}>
+                {param.type === "boolean" ? (
+                  <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(paramValues[name])}
+                      onChange={(e) => handleParamChange(name, e.target.checked)}
+                    />
+                    <code>{name}</code>
+                  </label>
+                ) : (
+                  <>
+                    <label htmlFor={`param-${name}`} className={labelClass}>
+                      <code>{name}</code>
+                    </label>
+                    {param.enum ? (
+                      <select
+                        id={`param-${name}`}
+                        value={String(paramValues[name] ?? "")}
+                        onChange={(e) => handleParamChange(name, e.target.value)}
+                        className={inputClass}
+                      >
+                        {param.enum.map((option) => (
+                          <option key={String(option)} value={String(option)}>
+                            {String(option)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={`param-${name}`}
+                        type={
+                          param.type === "number" || param.type === "integer"
+                            ? "number"
+                            : "text"
+                        }
+                        {...(param.type === "number" ||
+                        param.type === "integer"
+                          ? numberBounds(param)
+                          : {})}
+                        value={String(paramValues[name] ?? "")}
+                        onChange={(e) => handleParamChange(name, e.target.value)}
+                        className={inputClass}
+                      />
+                    )}
+                  </>
+                )}
+                {param.description && (
+                  <p className={hintClass}>
+                    {param.description}
+                    {param.default !== undefined &&
+                      ` Default: ${String(param.default)}.`}
                   </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                    JSON, TXT, or CSV files only
-                  </p>
-                </label>
+                )}
               </div>
-            )}
-          </div>
+            ))}
+          </fieldset>
+
+          {/* Data */}
+          <fieldset className="space-y-4 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+            <legend className="text-lg font-semibold text-neutral-700 dark:text-neutral-100">
+              Data
+            </legend>
+            <FileField
+              id="inputs_file"
+              label="Inputs (JSONL) *"
+              hint={`Public. One {"id", "input"} object per line. For images or audio, add "media" with the file's path inside the Media Archive.`}
+              accept=".jsonl,application/jsonl,application/x-ndjson"
+              file={inputsFile}
+              onChange={withClear(setInputsFile)}
+            />
+            <FileField
+              id="ground_truth_file"
+              label="Ground Truth (JSONL) *"
+              hint='Private, never published. One {"id", "reference"} object per line, with exactly the same ids as the Inputs. The reference shape depends on the scorer (text for CER and WER, a list of spans for span F1).'
+              accept=".jsonl,application/jsonl,application/x-ndjson"
+              file={groundTruthFile}
+              onChange={withClear(setGroundTruthFile)}
+            />
+            <FileField
+              id="media_archive_file"
+              label="Media Archive (zip, optional)"
+              hint="Public. Images or audio the Inputs point to, for OCR and speech challenges. Up to 2 GB."
+              accept=".zip,application/zip"
+              file={mediaArchiveFile}
+              onChange={withClear(setMediaArchiveFile)}
+            />
+          </fieldset>
+
           {/* Challenge Creation Error */}
           {challengeError && (
-            <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
-              <p className="text-red-800 dark:text-red-400">{challengeError}</p>
+            <div
+              role="alert"
+              className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+            >
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 shrink-0" />
+                <p className="text-red-800 dark:text-red-400">
+                  {challengeError}
+                </p>
+              </div>
+              {dataErrors.length > 0 && (
+                <ul className="mt-3 ml-7 space-y-1 list-disc text-sm text-red-800 dark:text-red-400">
+                  {dataErrors.map((err, index) => (
+                    <li key={index}>
+                      <span className="font-medium">
+                        {FIELD_LABELS[err.field] ?? err.field}
+                      </span>
+                      {err.line != null && `, line ${err.line}`}
+                      {err.id != null && `, id "${err.id}"`}: {err.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
+
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-4 pt-6 border-t border-neutral-200 dark:border-neutral-700">
             <button

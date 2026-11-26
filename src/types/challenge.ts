@@ -19,6 +19,9 @@ export interface Challenge {
   created_at: string;
   updated_at: string;
   category: Category;
+  repo_name: string;
+  repo_url: string;
+  sync_status: "pending" | "synced" | "failed";
   // Keep some legacy fields for backward compatibility
   name?: string;
   startDate?: string;
@@ -71,7 +74,43 @@ export interface ChallengeCreateRequest {
   image_uri: string;
   description: string;
   status: "active" | "completed" | "upcoming";
-  ground_truth_file?: File;
+  scorer_name: string;
+  scorer_params: Record<string, unknown>;
+  inputs_file: File;
+  ground_truth_file: File;
+  media_archive_file?: File;
+}
+
+// A Scorer from buddhist-eval, as listed by GET /scorers.
+export type ScorerDirection = "lower_is_better" | "higher_is_better";
+
+export interface ScorerParameter {
+  type?: "string" | "number" | "integer" | "boolean";
+  default?: unknown;
+  description?: string;
+  minimum?: number;
+  maximum?: number;
+  exclusiveMinimum?: number;
+  exclusiveMaximum?: number;
+  enum?: unknown[];
+}
+
+export interface Scorer {
+  name: string;
+  label: string;
+  direction: ScorerDirection;
+  parameter_schema: {
+    type?: "object";
+    properties?: Record<string, ScorerParameter>;
+  };
+}
+
+// One problem the backend found in the Challenge data (422 `errors`).
+export interface ChallengeDataError {
+  field: string;
+  message: string;
+  line?: number | null;
+  id?: string | null;
 }
 
 export interface ChallengeUpdateRequest {
