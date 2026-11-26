@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "../components/use-toast";
-import { ArrowLeft, Upload, CheckCircle, AlertCircle, Info, X } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle, Info } from "lucide-react";
 import {
   useChallenge,
   usePreferredModels,
@@ -14,14 +14,24 @@ import {
   SubmissionCreateError,
   SubmissionLimitError,
 } from "../api/challenge";
+import OwnSubmissionsList from "../components/OwnSubmissionsList";
 import {
-  SubmissionRepoLink,
-  SubmissionScore,
-  SubmissionStatusBadge,
-} from "../components/SubmissionSummary";
-import DeleteSubmissionButton from "../components/DeleteSubmissionButton";
+  DailyLimitNotice,
+  FieldErrors,
+  RejectionNotice,
+} from "../components/SubmissionNotices";
 import {
-  SUBMISSION_LICENSES,
+  ModelFields,
+  PreferredModelAndLicenseFields,
+  PromptFields,
+  SkillFields,
+} from "../components/SubmissionTypeFields";
+import {
+  hintClass,
+  inputClass,
+  labelClass,
+} from "../components/submissionFormClasses";
+import {
   type ChallengeDataError,
   type SubmissionLicense,
   type SubmissionRequest,
@@ -43,63 +53,6 @@ const INLINE_FIELDS = [
   "license",
   "predictions_file",
 ];
-
-const inputClass =
-  "w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent";
-const labelClass =
-  "block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2";
-const hintClass = "mt-1 text-sm text-neutral-500 dark:text-neutral-400";
-
-const FieldErrors = ({ errors }: { errors: ChallengeDataError[] }) => {
-  const { t } = useTranslation();
-  if (errors.length === 0) return null;
-  return (
-    <ul role="alert" className="mt-2 space-y-1 text-sm text-red-700 dark:text-red-400">
-      {errors.map((err, index) => (
-        <li key={index} className="flex items-start">
-          <AlertCircle className="w-4 h-4 mr-1.5 mt-0.5 shrink-0" />
-          <span>
-            {err.line != null && `${t("submission.line", { line: err.line })}: `}
-            {err.id != null && `${t("submission.inputId", { id: err.id })}: `}
-            {err.message}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-};
-
-const DailyLimitNotice = ({ resetAt }: { resetAt: Date }) => {
-  const { t, i18n } = useTranslation();
-  const known = !Number.isNaN(resetAt.getTime());
-  const format = (options: Intl.DateTimeFormatOptions) =>
-    resetAt.toLocaleString(i18n.language, {
-      dateStyle: "medium",
-      timeStyle: "short",
-      ...options,
-    });
-  return (
-    <div
-      role="alert"
-      className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
-    >
-      <div className="flex items-start">
-        <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 shrink-0" />
-        <div className="text-yellow-800 dark:text-yellow-300">
-          <p className="font-medium">{t("submission.limitReached")}</p>
-          {known && (
-            <p className="text-sm mt-1">
-              {t("submission.limitResetsAt", {
-                local: format({}),
-                utc: format({ timeZone: "UTC" }),
-              })}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Submission = () => {
   const documentation_link=`${import.meta.env.VITE_SERVER_URL || "https://eval-api.pecha.tools"}/documentation`
@@ -420,7 +373,6 @@ const Submission = () => {
               </div>
             </div>
 
-            {/* Submission Type */}
             <fieldset>
               <legend className={labelClass}>{t("submission.typeLabel")}</legend>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -456,7 +408,6 @@ const Submission = () => {
               <FieldErrors errors={errorsFor("type")} />
             </fieldset>
 
-            {/* Name */}
             <div>
               <label htmlFor="name" className={labelClass}>
                 {t(isPromptOrSkill ? "submission.name" : "submission.modelName")} *
@@ -514,178 +465,45 @@ const Submission = () => {
               <FieldErrors errors={errorsFor("description")} />
             </div>
 
-            {/* Model Link */}
             {!isPromptOrSkill && (
-              <div>
-                <label htmlFor="modelLink" className={labelClass}>
-                  {t("submission.modelLink")}
-                </label>
-                <input
-                  type="url"
-                  id="modelLink"
-                  value={modelLink}
-                  onChange={(e) => withClear(setModelLink)(e.target.value)}
-                  className={inputClass}
-                  placeholder="https://huggingface.co/..."
-                />
-                <p className={hintClass}>{t("submission.modelLinkHint")}</p>
-                <FieldErrors errors={errorsFor("model_link")} />
-              </div>
+              <ModelFields
+                modelLink={modelLink}
+                onModelLinkChange={withClear(setModelLink)}
+                errors={errorsFor("model_link")}
+              />
             )}
 
             {isPrompt && (
-              <>
-                {/* Prompt: typed or uploaded, exactly one */}
-                <div>
-                  <label htmlFor="promptText" className={labelClass}>
-                    {t("submission.prompt")} *
-                  </label>
-                  <textarea
-                    id="promptText"
-                    value={promptText}
-                    onChange={(e) => withClear(setPromptText)(e.target.value)}
-                    rows={8}
-                    disabled={!!promptFile}
-                    className={`${inputClass} font-mono text-sm disabled:opacity-50`}
-                    placeholder={t("submission.promptPlaceholder")}
-                  />
-                  <p className={hintClass}>
-                    {promptFile
-                      ? t("submission.usingPromptFile")
-                      : t("submission.promptHint")}
-                  </p>
-                  <FieldErrors errors={errorsFor("prompt_text")} />
-
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <label
-                      htmlFor="promptFile"
-                      className="inline-flex items-center px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors duration-200"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {t("submission.promptFileLabel")}
-                    </label>
-                    <input
-                      id="promptFile"
-                      type="file"
-                      accept=".md,.txt,text/markdown,text/plain"
-                      onChange={handleArtifactFileChange(setPromptFile)}
-                      className="sr-only"
-                    />
-                    {promptFile && (
-                      <span className="inline-flex items-center text-sm text-neutral-700 dark:text-neutral-200">
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" />
-                        {promptFile.name}
-                        <button
-                          type="button"
-                          onClick={() => withClear(setPromptFile)(null)}
-                          className="ml-2 inline-flex items-center text-neutral-500 hover:text-red-600"
-                          aria-label={t("submission.removeFile")}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                  <FieldErrors errors={errorsFor("prompt_file")} />
-                </div>
-              </>
+              <PromptFields
+                promptText={promptText}
+                onPromptTextChange={withClear(setPromptText)}
+                promptFile={promptFile}
+                onPromptFileChange={handleArtifactFileChange(setPromptFile)}
+                onPromptFileRemove={() => withClear(setPromptFile)(null)}
+                errorsFor={errorsFor}
+              />
             )}
 
-            {/* Skill zip */}
             {isSkill && (
-              <div>
-                <label htmlFor="skillFile" className={labelClass}>
-                  {t("submission.skillFile")} *
-                </label>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label
-                    htmlFor="skillFile"
-                    className="inline-flex items-center px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors duration-200"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {t("submission.skillFileLabel")}
-                  </label>
-                  <input
-                    id="skillFile"
-                    type="file"
-                    accept=".zip,application/zip"
-                    onChange={handleArtifactFileChange(setSkillFile)}
-                    className="sr-only"
-                  />
-                  {skillFile && (
-                    <span className="inline-flex items-center text-sm text-neutral-700 dark:text-neutral-200">
-                      <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" />
-                      {skillFile.name} ({(skillFile.size / 1024).toFixed(1)} KB)
-                      <button
-                        type="button"
-                        onClick={() => withClear(setSkillFile)(null)}
-                        className="ml-2 inline-flex items-center text-neutral-500 hover:text-red-600"
-                        aria-label={t("submission.removeFile")}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </span>
-                  )}
-                </div>
-                <p className={hintClass}>{t("submission.skillFileHint")}</p>
-                <FieldErrors errors={errorsFor("skill_file")} />
-              </div>
+              <SkillFields
+                skillFile={skillFile}
+                onSkillFileChange={handleArtifactFileChange(setSkillFile)}
+                onSkillFileRemove={() => withClear(setSkillFile)(null)}
+                errors={errorsFor("skill_file")}
+              />
             )}
 
             {isPromptOrSkill && (
-              <>
-                {/* Preferred Model */}
-                <div>
-                  <label htmlFor="preferredModel" className={labelClass}>
-                    {t("submission.preferredModel")} *
-                  </label>
-                  <input
-                    type="text"
-                    id="preferredModel"
-                    list="preferredModelSuggestions"
-                    autoComplete="off"
-                    value={preferredModel}
-                    onChange={(e) => withClear(setPreferredModel)(e.target.value)}
-                    className={inputClass}
-                    placeholder={t("submission.preferredModelPlaceholder")}
-                    required
-                  />
-                  <datalist id="preferredModelSuggestions">
-                    {preferredModelSuggestions.map((modelId) => (
-                      <option key={modelId} value={modelId} />
-                    ))}
-                  </datalist>
-                  <p className={hintClass}>{t("submission.preferredModelHint")}</p>
-                  <FieldErrors errors={errorsFor("preferred_model")} />
-                </div>
-
-                {/* License */}
-                <div>
-                  <label htmlFor="license" className={labelClass}>
-                    {t("submission.license")} *
-                  </label>
-                  <select
-                    id="license"
-                    value={license}
-                    onChange={(e) =>
-                      withClear(setLicense)(e.target.value as SubmissionLicense)
-                    }
-                    className={inputClass}
-                    required
-                  >
-                    {SUBMISSION_LICENSES.map((id) => (
-                      <option key={id} value={id}>
-                        {id}
-                      </option>
-                    ))}
-                  </select>
-                  <p className={hintClass}>{t("submission.licenseHint")}</p>
-                  <FieldErrors errors={errorsFor("license")} />
-                </div>
-              </>
+              <PreferredModelAndLicenseFields
+                preferredModel={preferredModel}
+                onPreferredModelChange={withClear(setPreferredModel)}
+                suggestions={preferredModelSuggestions}
+                license={license}
+                onLicenseChange={withClear(setLicense)}
+                errorsFor={errorsFor}
+              />
             )}
 
-            {/* Predictions File */}
             <div>
               <label htmlFor="fileInput" className={labelClass}>
                 {t("submission.predictionsFile")} *
@@ -774,18 +592,8 @@ const Submission = () => {
 
             {limitResetAt && <DailyLimitNotice resetAt={limitResetAt} />}
 
-            {/* Rejection summary */}
             {submissionError && (
-              <div
-                role="alert"
-                className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-              >
-                <div className="flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 shrink-0" />
-                  <p className="text-red-800 dark:text-red-400">{submissionError}</p>
-                </div>
-                <FieldErrors errors={otherErrors} />
-              </div>
+              <RejectionNotice message={submissionError} errors={otherErrors} />
             )}
 
             <div className="flex justify-end space-x-4">
@@ -819,51 +627,11 @@ const Submission = () => {
           </form>
         </div>
 
-        {/* The participant's own Submissions to this Challenge */}
         {isAuthenticated && (
-          <section className="mt-8 mb-8">
-            <h2 className="text-xl font-semibold text-neutral-700 dark:text-neutral-100 mb-4">
-              {t("submission.yourSubmissions")}
-            </h2>
-            {challengeSubmissions.length === 0 ? (
-              <p className="text-neutral-500 dark:text-neutral-400">
-                {t("submission.noneYet")}
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {challengeSubmissions.map((submission) => (
-                  <li
-                    key={submission.id}
-                    className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-600 p-4 space-y-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-medium text-neutral-700 dark:text-neutral-100">
-                        {submission.name}
-                      </span>
-                      <span className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                        {t(`submission.types.${submission.type}.title`)}
-                      </span>
-                      <SubmissionStatusBadge status={submission.status} />
-                      <span className="ml-auto text-xs text-neutral-500 dark:text-neutral-400">
-                        {new Date(submission.created_at).toLocaleString()}
-                      </span>
-                    </div>
-                    <SubmissionScore submission={submission} />
-                    <div className="flex flex-wrap items-center gap-3">
-                      <SubmissionRepoLink
-                        submission={submission}
-                        repoUrl={challenge?.repo_url}
-                      />
-                      <DeleteSubmissionButton
-                        submission={submission}
-                        className="ml-auto"
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <OwnSubmissionsList
+            submissions={challengeSubmissions}
+            repoUrl={challenge.repo_url}
+          />
         )}
       </div>
     </div>
