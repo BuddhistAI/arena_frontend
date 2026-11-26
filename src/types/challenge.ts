@@ -234,6 +234,8 @@ export interface LeaderboardFilter {
 export interface RankedLeaderboard {
   scorer: LeaderboardScorer;
   counts: LeaderboardCounts;
+  // Rows the type filter and search show, on all pages together.
+  total: number;
   page: number;
   limit: number;
   rows: LeaderboardRow[];

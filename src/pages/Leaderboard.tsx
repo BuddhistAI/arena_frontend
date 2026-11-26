@@ -78,8 +78,8 @@ const Leaderboard = () => {
   const rows = leaderboard?.rows || [];
   const scorer = leaderboard?.scorer;
   const counts = leaderboard?.counts;
-  // Without counts a full page is the only sign that another may follow.
-  const hasNextPage = !!leaderboard && rows.length === leaderboard.limit;
+  // `total` counts the rows the filter and search show on every page.
+  const hasNextPage = !!leaderboard && page * leaderboard.limit < leaderboard.total;
   const user = currentUserData?.data;
   const isAdmin = user?.role === "admin";
 
