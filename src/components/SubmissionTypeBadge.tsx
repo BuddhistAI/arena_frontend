@@ -1,10 +1,5 @@
+import { useTranslation } from "react-i18next";
 import type { SubmissionType } from "../types/challenge";
-
-const LABELS: Record<SubmissionType, string> = {
-  model: "Model",
-  prompt: "Prompt",
-  skill: "Skill",
-};
 
 const CLASSES: Record<SubmissionType, string> = {
   model: "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300",
@@ -13,12 +8,15 @@ const CLASSES: Record<SubmissionType, string> = {
 };
 
 // Tells a Model, a Prompt and a Skill Submission apart at a glance.
-const SubmissionTypeBadge = ({ type }: { type: SubmissionType }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${CLASSES[type]}`}
-  >
-    {LABELS[type]}
-  </span>
-);
+const SubmissionTypeBadge = ({ type }: { type: SubmissionType }) => {
+  const { t } = useTranslation();
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${CLASSES[type]}`}
+    >
+      {t(`submissionType.${type}`)}
+    </span>
+  );
+};
 
 export default SubmissionTypeBadge;
