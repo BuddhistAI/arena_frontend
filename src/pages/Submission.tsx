@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useToast } from "../components/use-toast";
-import { ArrowLeft, Upload, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle, AlertCircle, Info, X } from "lucide-react";
 import {
   useChallenge,
   useSubmitToChallenge,
@@ -9,20 +9,39 @@ import {
 } from "../hooks/useChallenges";
 import { useAuth } from "../auth/use-auth-hook";
 import { useTranslation } from "react-i18next";
-import { SubmissionCreateError } from "../api/challenge";
+import {
+  SubmissionCreateError,
+  SubmissionLimitError,
+} from "../api/challenge";
 import {
   SubmissionRepoLink,
   SubmissionScore,
   SubmissionStatusBadge,
 } from "../components/SubmissionSummary";
-import type { ChallengeDataError, SubmissionType } from "../types/challenge";
+import {
+  SUBMISSION_LICENSES,
+  type ChallengeDataError,
+  type SubmissionLicense,
+  type SubmissionRequest,
+  type SubmissionType,
+} from "../types/challenge";
 
 const SUBMISSION_TYPES: SubmissionType[] = ["model", "prompt", "skill"];
-// Prompt and Skill Submissions arrive in later tickets.
-const ACCEPTED_TYPES: SubmissionType[] = ["model"];
+// Skill Submissions arrive in a later ticket.
+const ACCEPTED_TYPES: SubmissionType[] = ["model", "prompt"];
+const DEFAULT_LICENSE: SubmissionLicense = "CC-BY-4.0";
 // Form fields that show their errors under the input; any other field's
 // errors are listed with the summary.
-const INLINE_FIELDS = ["name", "description", "model_link", "predictions_file"];
+const INLINE_FIELDS = [
+  "name",
+  "description",
+  "model_link",
+  "prompt_text",
+  "prompt_file",
+  "preferred_model",
+  "license",
+  "predictions_file",
+];
 
 const inputClass =
   "w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent";
@@ -46,6 +65,38 @@ const FieldErrors = ({ errors }: { errors: ChallengeDataError[] }) => {
         </li>
       ))}
     </ul>
+  );
+};
+
+const DailyLimitNotice = ({ resetAt }: { resetAt: Date }) => {
+  const { t, i18n } = useTranslation();
+  const known = !Number.isNaN(resetAt.getTime());
+  const format = (options: Intl.DateTimeFormatOptions) =>
+    resetAt.toLocaleString(i18n.language, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      ...options,
+    });
+  return (
+    <div
+      role="alert"
+      className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+    >
+      <div className="flex items-start">
+        <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 shrink-0" />
+        <div className="text-yellow-800 dark:text-yellow-300">
+          <p className="font-medium">{t("submission.limitReached")}</p>
+          {known && (
+            <p className="text-sm mt-1">
+              {t("submission.limitResetsAt", {
+                local: format({}),
+                utc: format({ timeZone: "UTC" }),
+              })}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -81,9 +132,15 @@ const Submission = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [modelLink, setModelLink] = useState("");
+  const [promptText, setPromptText] = useState("");
+  const [promptFile, setPromptFile] = useState<File | null>(null);
+  const [preferredModel, setPreferredModel] = useState("");
+  const [license, setLicense] = useState<SubmissionLicense>(DEFAULT_LICENSE);
   const [dragActive, setDragActive] = useState(false);
+  const isPrompt = submissionType === "prompt";
   const [submissionError, setSubmissionError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ChallengeDataError[]>([]);
+  const [limitResetAt, setLimitResetAt] = useState<Date | null>(null);
 
   const errorsFor = (field: string) =>
     fieldErrors.filter((err) => err.field === field);
@@ -109,6 +166,36 @@ const Submission = () => {
     if (file) {
       withClear(setPredictionsFile)(file);
     }
+  };
+
+  const handlePromptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      withClear(setPromptFile)(file);
+    }
+    e.target.value = "";
+  };
+
+  // Only the chosen Submission Type's fields are sent; the backend refuses
+  // the others.
+  const typeFields = (): Partial<SubmissionRequest> =>
+    isPrompt
+      ? {
+          preferred_model: preferredModel.trim(),
+          license,
+          ...(promptFile ? { prompt_file: promptFile } : { prompt_text: promptText }),
+        }
+      : { model_link: modelLink.trim() || undefined };
+
+  const resetForm = () => {
+    setPredictionsFile(null);
+    setName("");
+    setDescription("");
+    setModelLink("");
+    setPromptText("");
+    setPromptFile(null);
+    setPreferredModel("");
+    setLicense(DEFAULT_LICENSE);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -145,6 +232,7 @@ const Submission = () => {
       return;
     }
     clearErrors();
+    setLimitResetAt(null);
 
     try {
       await submitMutation.mutateAsync({
@@ -152,16 +240,15 @@ const Submission = () => {
         type: submissionType,
         name: name.trim(),
         description: description.trim(),
-        model_link: modelLink.trim() || undefined,
+        ...typeFields(),
         predictions_file: predictionsFile,
       });
       success(t("submission.accepted"), t("submission.acceptedDesc"), 7000);
-      setPredictionsFile(null);
-      setName("");
-      setDescription("");
-      setModelLink("");
+      resetForm();
     } catch (error) {
-      if (error instanceof SubmissionCreateError) {
+      if (error instanceof SubmissionLimitError) {
+        setLimitResetAt(error.resetAt);
+      } else if (error instanceof SubmissionCreateError) {
         setSubmissionError(error.message);
         setFieldErrors(error.errors);
       } else {
@@ -172,12 +259,15 @@ const Submission = () => {
     }
   };
 
+  const promptReady =
+    (!!promptFile || !!promptText.trim()) && !!preferredModel.trim();
   const canSubmit =
     isAuthenticated &&
     ACCEPTED_TYPES.includes(submissionType) &&
     !!predictionsFile &&
     !!name.trim() &&
     !!description.trim() &&
+    (!isPrompt || promptReady) &&
     !submitMutation.isPending;
 
   if (challengeLoading) {
@@ -355,7 +445,7 @@ const Submission = () => {
             {/* Name */}
             <div>
               <label htmlFor="name" className={labelClass}>
-                {t("submission.modelName")} *
+                {t(isPrompt ? "submission.name" : "submission.modelName")} *
               </label>
               <input
                 type="text"
@@ -363,10 +453,16 @@ const Submission = () => {
                 value={name}
                 onChange={(e) => withClear(setName)(e.target.value)}
                 className={inputClass}
-                placeholder={t("submission.modelNamePlaceholder")}
+                placeholder={t(
+                  isPrompt
+                    ? "submission.promptNamePlaceholder"
+                    : "submission.modelNamePlaceholder"
+                )}
                 required
               />
-              <p className={hintClass}>{t("submission.modelNameHint")}</p>
+              {!isPrompt && (
+                <p className={hintClass}>{t("submission.modelNameHint")}</p>
+              )}
               <FieldErrors errors={errorsFor("name")} />
             </div>
 
@@ -379,30 +475,139 @@ const Submission = () => {
                 id="description"
                 value={description}
                 onChange={(e) => withClear(setDescription)(e.target.value)}
-                rows={3}
+                rows={isPrompt ? 4 : 3}
                 className={inputClass}
-                placeholder={t("submission.descriptionPlaceholder")}
+                placeholder={t(
+                  isPrompt
+                    ? "submission.promptDescriptionPlaceholder"
+                    : "submission.descriptionPlaceholder"
+                )}
                 required
               />
+              {isPrompt && (
+                <p className={hintClass}>{t("submission.promptDescriptionHint")}</p>
+              )}
               <FieldErrors errors={errorsFor("description")} />
             </div>
 
             {/* Model Link */}
-            <div>
-              <label htmlFor="modelLink" className={labelClass}>
-                {t("submission.modelLink")}
-              </label>
-              <input
-                type="url"
-                id="modelLink"
-                value={modelLink}
-                onChange={(e) => withClear(setModelLink)(e.target.value)}
-                className={inputClass}
-                placeholder="https://huggingface.co/..."
-              />
-              <p className={hintClass}>{t("submission.modelLinkHint")}</p>
-              <FieldErrors errors={errorsFor("model_link")} />
-            </div>
+            {!isPrompt && (
+              <div>
+                <label htmlFor="modelLink" className={labelClass}>
+                  {t("submission.modelLink")}
+                </label>
+                <input
+                  type="url"
+                  id="modelLink"
+                  value={modelLink}
+                  onChange={(e) => withClear(setModelLink)(e.target.value)}
+                  className={inputClass}
+                  placeholder="https://huggingface.co/..."
+                />
+                <p className={hintClass}>{t("submission.modelLinkHint")}</p>
+                <FieldErrors errors={errorsFor("model_link")} />
+              </div>
+            )}
+
+            {isPrompt && (
+              <>
+                {/* Prompt: typed or uploaded, exactly one */}
+                <div>
+                  <label htmlFor="promptText" className={labelClass}>
+                    {t("submission.prompt")} *
+                  </label>
+                  <textarea
+                    id="promptText"
+                    value={promptText}
+                    onChange={(e) => withClear(setPromptText)(e.target.value)}
+                    rows={8}
+                    disabled={!!promptFile}
+                    className={`${inputClass} font-mono text-sm disabled:opacity-50`}
+                    placeholder={t("submission.promptPlaceholder")}
+                  />
+                  <p className={hintClass}>
+                    {promptFile
+                      ? t("submission.usingPromptFile")
+                      : t("submission.promptHint")}
+                  </p>
+                  <FieldErrors errors={errorsFor("prompt_text")} />
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <label
+                      htmlFor="promptFile"
+                      className="inline-flex items-center px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors duration-200"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {t("submission.promptFileLabel")}
+                    </label>
+                    <input
+                      id="promptFile"
+                      type="file"
+                      accept=".md,.txt,text/markdown,text/plain"
+                      onChange={handlePromptFileChange}
+                      className="sr-only"
+                    />
+                    {promptFile && (
+                      <span className="inline-flex items-center text-sm text-neutral-700 dark:text-neutral-200">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" />
+                        {promptFile.name}
+                        <button
+                          type="button"
+                          onClick={() => withClear(setPromptFile)(null)}
+                          className="ml-2 inline-flex items-center text-neutral-500 hover:text-red-600"
+                          aria-label={t("submission.removeFile")}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                  <FieldErrors errors={errorsFor("prompt_file")} />
+                </div>
+
+                {/* Preferred Model */}
+                <div>
+                  <label htmlFor="preferredModel" className={labelClass}>
+                    {t("submission.preferredModel")} *
+                  </label>
+                  <input
+                    type="text"
+                    id="preferredModel"
+                    value={preferredModel}
+                    onChange={(e) => withClear(setPreferredModel)(e.target.value)}
+                    className={inputClass}
+                    placeholder={t("submission.preferredModelPlaceholder")}
+                    required
+                  />
+                  <p className={hintClass}>{t("submission.preferredModelHint")}</p>
+                  <FieldErrors errors={errorsFor("preferred_model")} />
+                </div>
+
+                {/* License */}
+                <div>
+                  <label htmlFor="license" className={labelClass}>
+                    {t("submission.license")} *
+                  </label>
+                  <select
+                    id="license"
+                    value={license}
+                    onChange={(e) =>
+                      withClear(setLicense)(e.target.value as SubmissionLicense)
+                    }
+                    className={inputClass}
+                    required
+                  >
+                    {SUBMISSION_LICENSES.map((id) => (
+                      <option key={id} value={id}>
+                        {id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className={hintClass}>{t("submission.licenseHint")}</p>
+                  <FieldErrors errors={errorsFor("license")} />
+                </div>
+              </>
+            )}
 
             {/* Predictions File */}
             <div>
@@ -490,6 +695,8 @@ const Submission = () => {
                 </div>
               </div>
             )}
+
+            {limitResetAt && <DailyLimitNotice resetAt={limitResetAt} />}
 
             {/* Rejection summary */}
             {submissionError && (

@@ -45,6 +45,32 @@ export class SubmissionCreateError extends Error {
   }
 }
 
+// The participant used today's Submissions to this Challenge (429);
+// `resetAt` is when they can submit again (the next 00:00 UTC).
+export class SubmissionLimitError extends Error {
+  resetAt: Date;
+
+  constructor(message: string, resetAt: Date) {
+    super(message);
+    this.name = "SubmissionLimitError";
+    this.resetAt = resetAt;
+  }
+}
+
+const submissionLimitError = async (
+  response: Response
+): Promise<SubmissionLimitError> => {
+  const body = (await response.json().catch(() => ({}))) as {
+    detail?: unknown;
+    reset_at?: unknown;
+  };
+  const message =
+    typeof body.detail === "string"
+      ? body.detail
+      : "Daily Submission limit reached";
+  return new SubmissionLimitError(message, new Date(String(body.reset_at)));
+};
+
 interface ValidationFailure {
   message: string;
   errors: ChallengeDataError[];
@@ -307,8 +333,19 @@ export const challengeApi = {
     formData.append("type", submission.type);
     formData.append("name", submission.name);
     formData.append("description", submission.description);
-    if (submission.model_link) {
-      formData.append("model_link", submission.model_link);
+    const optionalFields = {
+      model_link: submission.model_link,
+      preferred_model: submission.preferred_model,
+      license: submission.license,
+      prompt_text: submission.prompt_text,
+    };
+    for (const [field, value] of Object.entries(optionalFields)) {
+      if (value) {
+        formData.append(field, value);
+      }
+    }
+    if (submission.prompt_file) {
+      formData.append("prompt_file", submission.prompt_file);
     }
     formData.append("predictions_file", submission.predictions_file);
 
@@ -327,6 +364,9 @@ export const challengeApi = {
       throw new Error("Could not reach the server to submit");
     }
 
+    if (response.status === 429) {
+      throw await submissionLimitError(response);
+    }
     if (!response.ok) {
       const { message, errors } = await parseValidationFailure(
         response,

@@ -343,6 +343,21 @@
     "descriptionPlaceholder": "How you produced these predictions...",
     "modelLink": "Model link (optional)",
     "modelLinkHint": "Any https link: Hugging Face, a paper, a GitHub repo or a vendor page.",
+    "name": "Name",
+    "promptNamePlaceholder": "e.g. Careful line-by-line transcriber",
+    "promptDescriptionPlaceholder": "What the prompt does and how to run it...",
+    "promptDescriptionHint": "Describe how to run your prompt: where the Input goes, the generation settings (temperature, max tokens, ...) and anything unusual, so others can reproduce it.",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Paste your prompt here...",
+    "promptHint": "Type or paste the prompt, or upload it as a file instead. It is saved as markdown.",
+    "usingPromptFile": "The uploaded file is used as the prompt. Remove it to type the prompt instead.",
+    "promptFileLabel": "Upload prompt file (.md, .txt)",
+    "removeFile": "Remove file",
+    "preferredModel": "Preferred Model",
+    "preferredModelPlaceholder": "e.g. gemini-2.5-pro",
+    "preferredModelHint": "The exact model id you ran the prompt with, even if the platform has not seen it before.",
+    "license": "License",
+    "licenseHint": "How others may reuse your prompt.",
     "predictionsFile": "Predictions File (JSONL)",
     "predictionsHint": "One row per Input id, each {\"id\": ..., \"prediction\": ...}, like the Challenge's sample submission.",
     "dropFile": "Drop your JSONL file here, or click to browse",
@@ -375,6 +390,8 @@
     "syncPanelTitle": "Submissions in the Challenge Repo",
     "syncPanelEmpty": "No scored Submissions yet.",
     "resync": "Resync",
-    "resyncFailed": "Resync failed"
+    "resyncFailed": "Resync failed",
+    "limitReached": "You have reached today's limit of 10 Submissions to this Challenge.",
+    "limitResetsAt": "You can submit again from {{local}} your time ({{utc}} UTC)."
   }
 }
