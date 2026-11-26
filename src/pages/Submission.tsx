@@ -9,6 +9,7 @@ import {
   useUserSubmissions,
 } from "../hooks/useChallenges";
 import { useAuth } from "../auth/use-auth-hook";
+import { useCurrentUser } from "../hooks/useUsers";
 import { useTranslation } from "react-i18next";
 import {
   SubmissionCreateError,
@@ -69,6 +70,8 @@ const Submission = () => {
   } = useChallenge(challengeId || "");
 
   const submitMutation = useSubmitToChallenge();
+  const { data: currentUserResponse } = useCurrentUser();
+  const username = isAuthenticated ? currentUserResponse?.data?.username : undefined;
   const { data: mySubmissionsResponse } = useUserSubmissions({
     enabled: isAuthenticated,
   });
@@ -590,6 +593,18 @@ const Submission = () => {
               </div>
             )}
 
+            {username && (
+              <p className={hintClass}>
+                {t("submission.publishedAs", { username })}{" "}
+                <Link
+                  to="/settings"
+                  className="font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline underline-offset-2"
+                >
+                  {t("submission.changeUsername")}
+                </Link>
+              </p>
+            )}
+
             {limitResetAt && <DailyLimitNotice resetAt={limitResetAt} />}
 
             {submissionError && (
@@ -631,6 +646,7 @@ const Submission = () => {
           <OwnSubmissionsList
             submissions={challengeSubmissions}
             repoUrl={challenge.repo_url}
+            scorerName={challenge.scorer_name}
           />
         )}
       </div>

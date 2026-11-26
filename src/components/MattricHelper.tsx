@@ -1,11 +1,9 @@
 import React from 'react'
 
 
+// Only the Arena's ELO is described here; a Challenge's Headline Metric is
+// labelled by its Scorer.
 const metricDescriptions = {
-  CER: "Character error rate",
-  WER: "Word Error rate",
-  BLEU: "BLEU score",
-  ACCURACY: "Accuracy",
   ELO: "Relative skill level",
 }
 

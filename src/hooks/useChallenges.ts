@@ -1,5 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { challengeApi } from "../api/challenge";
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { challengeApi, SubmissionReadError } from "../api/challenge";
 import type {
   ApiResponse,
   SubmissionRequest,
@@ -7,6 +12,7 @@ import type {
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
+  LeaderboardFilter,
 } from "../types/challenge";
 
 // Query keys
@@ -17,8 +23,8 @@ export const challengeKeys = {
   details: () => [...challengeKeys.all, "detail"] as const,
   detail: (id: string) => [...challengeKeys.details(), id] as const,
   leaderboards: () => [...challengeKeys.all, "leaderboard"] as const,
-  leaderboard: (challengeId: string, page?: number) =>
-    [...challengeKeys.leaderboards(), challengeId, page] as const,
+  leaderboard: (challengeId: string, page?: number, filter: LeaderboardFilter = {}) =>
+    [...challengeKeys.leaderboards(), challengeId, page, filter] as const,
   submissions: () => [...challengeKeys.all, "submissions"] as const,
   userSubmissions: (challengeId: string, teamName?: string) =>
     [...challengeKeys.submissions(), challengeId, teamName] as const,
@@ -50,27 +56,34 @@ export const useChallenge = (id: string) => {
   });
 };
 
-// Hooks for leaderboards
+// Hooks for leaderboards: one page of a Challenge's server-ranked Leaderboard
 export const useLeaderboard = (
   challengeId: string,
   page: number = 1,
-  limit: number = 10
+  filter: LeaderboardFilter = {}
 ) => {
   return useQuery({
-    queryKey: challengeKeys.leaderboard(challengeId, page),
-    queryFn: () => challengeApi.getLeaderboard(challengeId, page, limit),
+    queryKey: challengeKeys.leaderboard(challengeId, page, filter),
+    queryFn: () => challengeApi.getRankedLeaderboard(challengeId, page, filter),
     enabled: !!challengeId,
+    // Keep showing the last rows while a new tab, search or page loads.
+    placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000, // 2 minutes - leaderboards update more frequently
     gcTime: 5 * 60 * 1000,
   });
 };
 
-export const useSubmission = (id: string) => {
+// One Submission's detail page. A missing (404) or deleted (410) Submission
+// is an answer, not a failure, so it is not retried.
+export const useSubmissionDetail = (id: string) => {
   return useQuery({
     queryKey: challengeKeys.submission(id),
-    queryFn: () => challengeApi.getSubmissionById(id),
+    queryFn: () => challengeApi.getSubmissionDetail(id),
     enabled: !!id,
-    staleTime: 30 * 1000, // 30 seconds - submission status might change
+    staleTime: 30 * 1000, // 30 seconds - its status or sync may change
+    retry: (failureCount, error) =>
+      !(error instanceof SubmissionReadError && error.outcome !== "failed") &&
+      failureCount < 3,
   });
 };
 
@@ -126,13 +139,16 @@ export const useResyncSubmission = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (submission: UserSubmission) =>
+    mutationFn: (submission: Pick<UserSubmission, "id" | "challenge_id">) =>
       challengeApi.resyncSubmission(submission.id),
     onSuccess: (_, submission) => {
       queryClient.invalidateQueries({
         queryKey: challengeSubmissionsKey(submission.challenge_id),
       });
       queryClient.invalidateQueries({ queryKey: userSubmissionsKey });
+      queryClient.invalidateQueries({
+        queryKey: challengeKeys.submission(submission.id),
+      });
     },
   });
 };
@@ -177,58 +193,6 @@ export const usePrefetchChallenge = () => {
   };
 };
 
-// Hook to fetch leaderboard data for all challenges
-export const useAllLeaderboards = (
-  challenges: Array<{
-    id: string;
-    title?: string;
-    name?: string;
-    category?: { name?: string };
-    status?: string;
-  }> = []
-) => {
-  return useQuery({
-    queryKey: [...challengeKeys.leaderboards(), "all"],
-    queryFn: async () => {
-      const leaderboardPromises = challenges.map(async (challenge) => {
-        try {
-          const response = await challengeApi.getLeaderboard(
-            challenge.id,
-            1,
-            5
-          ); // Get top 5 for each
-          return {
-            challengeId: challenge.id,
-            challengeTitle: challenge.title || challenge.name,
-            challengeCategory: challenge.category?.name || "Unknown",
-            challengeStatus: challenge.status,
-            submissions: response.data,
-            totalSubmissions: response.pagination?.total || 0,
-          };
-        } catch (error) {
-          console.error(
-            `Failed to fetch leaderboard for ${challenge.id}:`,
-            error
-          );
-          return {
-            challengeId: challenge.id,
-            challengeTitle: challenge.title || challenge.name,
-            challengeCategory: challenge.category?.name || "Unknown",
-            challengeStatus: challenge.status,
-            submissions: [],
-            totalSubmissions: 0,
-          };
-        }
-      });
-
-      return Promise.all(leaderboardPromises);
-    },
-    enabled: challenges.length > 0,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-};
-
 // Helper hook to prefetch leaderboard
 export const usePrefetchLeaderboard = () => {
   const queryClient = useQueryClient();
@@ -236,7 +200,7 @@ export const usePrefetchLeaderboard = () => {
   return (challengeId: string) => {
     queryClient.prefetchQuery({
       queryKey: challengeKeys.leaderboard(challengeId, 1),
-      queryFn: () => challengeApi.getLeaderboard(challengeId, 1, 10),
+      queryFn: () => challengeApi.getRankedLeaderboard(challengeId, 1),
       staleTime: 2 * 60 * 1000,
     });
   };
@@ -330,16 +294,6 @@ export const useMySubmissions = () => {
   });
 };
 
-export const useSubmissionById = (submissionId: string) => {
-  return useQuery({
-    queryKey: ["submissions", "detail", submissionId],
-    queryFn: () => challengeApi.getSubmissionById(submissionId),
-    enabled: !!submissionId,
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
 export const useDeleteSubmission = () => {
   const queryClient = useQueryClient();
 
@@ -376,28 +330,10 @@ export const useDeleteSubmission = () => {
       queryClient.invalidateQueries({
         queryKey: challengeKeys.leaderboards(),
       });
-
-      // Force refetch of combined leaderboards
-      queryClient.refetchQueries({
-        queryKey: [...challengeKeys.leaderboards(), "all"],
-      });
     },
     onError: (error) => {
       console.error("Submission deletion failed:", error);
     },
-  });
-};
-
-// Deprecated: Use individual challenge leaderboard hooks instead
-export const useLeaderboardResults = () => {
-  console.warn(
-    "useLeaderboardResults is deprecated. Use useLeaderboard(challengeId) instead."
-  );
-  return useQuery({
-    queryKey: ["results", "leaderboard", "deprecated"],
-    queryFn: () =>
-      Promise.resolve({ data: [], message: "Deprecated", success: false }),
-    enabled: false, // Disable this query
   });
 };
 

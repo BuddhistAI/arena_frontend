@@ -6,8 +6,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import JsonViewer from "./JsonViewer";
-import { formatMetric } from "../lib/utils";
+import { useScorers } from "../hooks/useChallenges";
+import { formatMetric } from "../utils/formatMetric";
 import type {
   SubmissionStatus,
   SyncStatus,
@@ -89,17 +89,19 @@ export const SubmissionRepoLink = ({
   );
 };
 
-// The details' top-level numbers (e.g. corpus CER beside the mean), shown
-// next to the Headline Metric; nested details stay in the full view.
-const scalarDetails = (details: Record<string, unknown>) =>
-  Object.entries(details).filter(
-    (entry): entry is [string, number] => typeof entry[1] === "number"
-  );
-
-// A Submission's result: the Headline Metric and details once completed,
-// the error once failed, nothing while it is being scored.
-export const SubmissionScore = ({ submission }: { submission: UserSubmission }) => {
+// A Submission's result: the Headline Metric, in its Scorer's display
+// format, and the Scorer's Public Summary once completed; the error once
+// failed; nothing while it is being scored.
+export const SubmissionScore = ({
+  submission,
+  scorerName,
+}: {
+  submission: UserSubmission;
+  scorerName?: string;
+}) => {
   const { t } = useTranslation();
+  const { data: scorers = [] } = useScorers();
+  const scorer = scorers.find((s) => s.name === scorerName);
 
   if (submission.status === "failed") {
     return (
@@ -116,33 +118,22 @@ export const SubmissionScore = ({ submission }: { submission: UserSubmission }) 
     return null;
   }
 
-  const details = submission.score_details ?? {};
   return (
-    <div className="text-sm space-y-2">
-      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-        <p>
-          <span className="text-neutral-500 dark:text-neutral-400">
-            {t("submission.headlineMetric")}:
-          </span>{" "}
-          <span className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">
-            {formatMetric(submission.headline_metric)}
-          </span>
+    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+      <p>
+        <span className="text-neutral-500 dark:text-neutral-400">
+          {scorer?.label ?? t("submission.headlineMetric")}:
+        </span>{" "}
+        <span className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">
+          {scorer ? formatMetric(submission.headline_metric, scorer.display_format) : "—"}
+        </span>
+      </p>
+      {(submission.public_summary ?? []).map((entry) => (
+        <p key={entry.key} className="text-neutral-600 dark:text-neutral-300">
+          <span className="text-neutral-500 dark:text-neutral-400">{entry.label}:</span>{" "}
+          {formatMetric(entry.value, entry.format)}
         </p>
-        {scalarDetails(details).map(([name, value]) => (
-          <p key={name} className="text-neutral-600 dark:text-neutral-300">
-            <span className="text-neutral-500 dark:text-neutral-400">{name}:</span>{" "}
-            {formatMetric(value)}
-          </p>
-        ))}
-      </div>
-      <details>
-        <summary className="cursor-pointer text-neutral-500 dark:text-neutral-400">
-          {t("submission.details")}
-        </summary>
-        <div className="mt-2 max-h-64 overflow-auto text-xs">
-          <JsonViewer json={details} />
-        </div>
-      </details>
+      ))}
     </div>
   );
 };

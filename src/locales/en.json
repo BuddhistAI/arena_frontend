@@ -56,12 +56,6 @@
     "submitResults": "Submit Results",
     "model": "Model",
     "actions": "Actions",
-    "metrics": {
-      "CER": "CER",
-      "WER": "WER",
-      "BLEU": "BLEU",
-      "ACCURACY": "Accuracy"
-    },
     "viewAll": "View all",
     "noLeaderboardsAvailable": "No leaderboards available",
     "checkBackLater": "Check back later when challenges have submissions.",
@@ -209,7 +203,12 @@
     "notifications": "Notifications",
     "privacy": "Privacy",
     "account": "Account",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "publicUsername": "Public username",
+    "saveUsername": "Save",
+    "savingUsername": "Saving...",
+    "usernameSaved": "Username saved.",
+    "usernameHint": "Your Submissions are published under this name on the Leaderboard and in public Challenge Repos. Use 3 to 30 lowercase letters, digits, - or _. Submissions already published to a repo keep the name they were published with."
   },
   "auth": {
     "welcomeBack": "Welcome back",
@@ -370,6 +369,8 @@
     "submitting": "Submitting...",
     "loginToSubmit": "Login to Submit",
     "loginPrompt": "Please log in to submit to this challenge.",
+    "publishedAs": "Published as @{{username}} on the Leaderboard and in the public Challenge Repo.",
+    "changeUsername": "Change username",
     "loginConfirm": "You need to be logged in to submit. Would you like to log in now?",
     "accepted": "Submission accepted",
     "acceptedDesc": "It is being scored; its status updates below.",
@@ -384,7 +385,6 @@
       "failed": "Failed"
     },
     "headlineMetric": "Headline Metric",
-    "details": "Details",
     "scoringFailed": "Scoring failed",
     "repoFolder": "View in the Challenge Repo",
     "sync": {
@@ -395,6 +395,7 @@
     "syncPanelTitle": "All Submissions (admin)",
     "syncPanelEmpty": "No Submissions yet.",
     "resync": "Resync",
+    "download": "Download",
     "resyncFailed": "Resync failed",
     "delete": "Delete",
     "deleting": "Deleting...",
@@ -403,5 +404,39 @@
     "deleteFailed": "Could not delete the Submission",
     "limitReached": "You have reached today's limit of 10 Submissions to this Challenge.",
     "limitResetsAt": "You can submit again from {{local}} your time ({{utc}} UTC)."
+  },
+  "submissionDetail": {
+    "back": "Back to Leaderboard",
+    "loading": "Loading Submission...",
+    "deleted": "This Submission was deleted",
+    "notFound": "Submission not found",
+    "notFoundDesc": "It does not exist, or it is not scored yet and is not yours.",
+    "loadFailed": "Could not load the Submission. Please try again later.",
+    "rank": "Rank",
+    "submittedBy": "by @{{submitter}}",
+    "submittedOn": "submitted {{date}}",
+    "description": "Description",
+    "noDescription": "No description.",
+    "headlineMetric": "Headline Metric",
+    "details": "Details",
+    "modelLink": "Model link",
+    "repoFolder": "Challenge Repo",
+    "prompt": "Prompt",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Could not copy the prompt",
+    "syncFailed": "Publishing to the Challenge Repo failed.",
+    "resyncQueued": "Resync queued"
+  },
+  "submissionType": {
+    "model": "Model",
+    "prompt": "Prompt",
+    "skill": "Skill"
+  },
+  "leaderboardFilters": {
+    "all": "All",
+    "typeTabs": "Submission Type",
+    "searchLabel": "Search the Leaderboard",
+    "searchPlaceholder": "Search name, submitter or model"
   }
 }

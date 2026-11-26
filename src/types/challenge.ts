@@ -1,3 +1,5 @@
+import type { DisplayFormat } from "../utils/formatMetric";
+
 export interface Category {
   id: string;
   name: string;
@@ -46,7 +48,7 @@ export type SubmissionStatus = "pending" | "processing" | "completed" | "failed"
 export const SUBMISSION_LICENSES = ["CC-BY-4.0", "CC0-1.0", "MIT", "Apache-2.0"] as const;
 export type SubmissionLicense = (typeof SUBMISSION_LICENSES)[number];
 
-// A Submission as GET /submissions/{id} and /submissions/my return it.
+// A Submission as /submissions/my and the admin listing return it.
 // `headline_metric` is unrounded; round it only for display.
 export interface UserSubmission {
   id: string;
@@ -62,12 +64,43 @@ export interface UserSubmission {
   status: SubmissionStatus;
   status_message: string | null;
   headline_metric: number | null;
-  score_details: Record<string, unknown> | null;
+  // The Scorer's Public Summary once completed; per-item scores are never sent.
+  public_summary: PublicSummaryValue[] | null;
   // The Submission's folder in the Challenge Repo, set once synced.
   repo_path: string | null;
   sync_status: SyncStatus;
   created_at: string;
   updated_at: string;
+}
+
+// GET /submissions/{id}: everything public about one Submission, for its
+// detail page. A scored one is public; one pending, processing or failed
+// reaches only its submitter and admins. Never holds per-item scores.
+export interface SubmissionDetailView {
+  id: string;
+  challenge_id: string;
+  // Its Rank on the Challenge's Leaderboard; null until scored.
+  rank: number | null;
+  type: SubmissionType;
+  name: string;
+  submitter: string;
+  created_at: string;
+  description: string | null;
+  status: SubmissionStatus;
+  status_message: string | null;
+  scorer: LeaderboardScorer;
+  headline_metric: number | null;
+  public_summary: PublicSummaryValue[] | null;
+  model_link: string | null;
+  preferred_model: string | null;
+  license: SubmissionLicense | null;
+  sync_status: SyncStatus;
+  // The Submission's folder in the Challenge Repo on GitHub; null until synced.
+  repo_url: string | null;
+  // Prompt only: the prompt's text.
+  prompt_text: string | null;
+  // Prompt and Skill: where to download it, relative to the API root; null for a Model.
+  download_url: string | null;
 }
 
 // Legacy submission interface (keeping for compatibility)
@@ -137,14 +170,76 @@ export interface ScorerParameter {
   enum?: unknown[];
 }
 
+// One aggregate number a Scorer declares safe to show beside the Headline Metric.
+export interface PublicSummaryEntry {
+  key: string;
+  label: string;
+  format: DisplayFormat;
+}
+
+// A Public Summary entry of a scored Submission, with its value.
+export interface PublicSummaryValue extends PublicSummaryEntry {
+  value: number;
+}
+
 export interface Scorer {
   name: string;
   label: string;
   direction: ScorerDirection;
+  display_format: DisplayFormat;
+  public_summary: PublicSummaryEntry[];
   parameter_schema: {
     type?: "object";
     properties?: Record<string, ScorerParameter>;
   };
+}
+
+// GET /challenges/{id}/leaderboard: one page of a Challenge's Leaderboard,
+// ranked on the server. A row's `rank` is its Rank on the whole Leaderboard, whatever the filter.
+export interface LeaderboardScorer {
+  name: string;
+  label: string;
+  direction: ScorerDirection;
+  display_format: DisplayFormat;
+  public_summary: PublicSummaryEntry[];
+}
+
+export interface LeaderboardRow {
+  submission_id: string;
+  rank: number;
+  type: SubmissionType;
+  name: string;
+  submitter: string;
+  created_at: string;
+  headline_metric: number;
+  preferred_model: string | null;
+  // Prompt and Skill: where to download, relative to the API root; null for a Model.
+  download_url: string | null;
+}
+
+// How many rows the whole Leaderboard holds, in all and per Submission Type,
+// whatever the type filter, search and page.
+export interface LeaderboardCounts {
+  all: number;
+  model: number;
+  prompt: number;
+  skill: number;
+}
+
+// Which rows of a Leaderboard to show. Neither changes a row's Rank.
+export interface LeaderboardFilter {
+  type?: SubmissionType; // omitted for All
+  q?: string; // matches name, submitter or Preferred Model, ignoring case
+}
+
+export interface RankedLeaderboard {
+  scorer: LeaderboardScorer;
+  counts: LeaderboardCounts;
+  // Rows the type filter and search show, on all pages together.
+  total: number;
+  page: number;
+  limit: number;
+  rows: LeaderboardRow[];
 }
 
 // One problem the backend found in uploaded Challenge or Submission data
@@ -181,65 +276,9 @@ export interface SubmissionResponse {
   updated_at: string;
 }
 
-export interface Model {
-  id: string;
-  name: string;
-  created_at: string;
-  created_by: string;
-  updated_at: string;
-  updated_by: string;
-}
-
-export interface SubmissionDetail {
-  id: string;
-  user_id: string;
-  model_id: string;
-  description: string;
-  dataset_url: string;
-  created_at: string;
-  updated_at: string;
-  model: Model;
-}
-
-export interface LeaderboardResult {
-  id: string;
-  type: "CER" | "WER" | "BLEU" | "ACCURACY" | string;
-  user_id: string;
-  submission_id: string;
-  score: number;
-  created_by: string;
-  updated_by: string;
-  created_at: string;
-  updated_at: string;
-  submission: SubmissionDetail;
-}
-
-export interface LeaderboardEntry {
-  submission_id: string;
-  model_name: string;
-  user_id: string;
-  description: string;
-  created_at: string;
-  metrics: {
-    [key: string]: number; // CER, WER, etc.
-  };
-  rank?: number;
-}
-
 export interface ApiResponse<T> {
   data: T;
   message: string;
   success: boolean;
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-  message: string;
-  success: boolean;
-}

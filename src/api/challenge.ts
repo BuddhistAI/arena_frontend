@@ -5,13 +5,13 @@ import type {
   SubmissionRequest,
   SubmissionCreatedResponse,
   SubmissionResponse,
-  LeaderboardResult,
-  LeaderboardEntry,
+  SubmissionDetailView,
+  LeaderboardFilter,
+  RankedLeaderboard,
   ChallengeCreateRequest,
   ChallengeUpdateRequest,
   CategoryCreateRequest,
   ApiResponse,
-  PaginatedResponse,
   Scorer,
   ChallengeDataError,
 } from "../types/challenge";
@@ -20,6 +20,9 @@ import { getAuthHeaders, setAuthTokenGetter } from "../lib/auth";
 // API Base URL
 const API_BASE_URL =
   import.meta.env.VITE_SERVER_URL || "https://eval-api.pecha.tools";
+
+// An absolute URL for a path the API returns relative to its root.
+export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
 // A failed create: `message` is the summary, `errors` lists each problem
 // in the uploaded data when the backend reports them (422).
@@ -42,6 +45,36 @@ export class SubmissionCreateError extends Error {
     super(message);
     this.name = "SubmissionCreateError";
     this.errors = errors;
+  }
+}
+
+// What a refused Submission read means. "notFound" (404: it does not exist,
+// or the viewer may not see it) and "deleted" (410) are answers to show;
+// "failed" is anything else, worth retrying.
+export type SubmissionReadOutcome = "notFound" | "deleted" | "failed";
+
+const READ_OUTCOMES: Partial<Record<number, SubmissionReadOutcome>> = {
+  404: "notFound",
+  410: "deleted",
+};
+
+const READ_MESSAGES: Record<SubmissionReadOutcome, string> = {
+  notFound: "Submission not found",
+  deleted: "This Submission was deleted",
+  failed: "Failed to load the Submission",
+};
+
+// A Submission that could not be read, with what its status means.
+export class SubmissionReadError extends Error {
+  status: number;
+  outcome: SubmissionReadOutcome;
+
+  constructor(status: number) {
+    const outcome = READ_OUTCOMES[status] ?? "failed";
+    super(`${READ_MESSAGES[outcome]} (status ${status})`);
+    this.name = "SubmissionReadError";
+    this.status = status;
+    this.outcome = outcome;
   }
 }
 
@@ -220,108 +253,28 @@ export const challengeApi = {
     }
   },
 
-  // Get leaderboard for a challenge using the new endpoint
-  getLeaderboard: async (
+  // One page of a Challenge's Leaderboard, ranked on the server.
+  getRankedLeaderboard: async (
     challengeId: string,
     page: number = 1,
-    limit: number = 10
-  ): Promise<PaginatedResponse<LeaderboardEntry>> => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/results/challenge/${challengeId}`,
-        {
-          headers: {
-            accept: "application/json",
-          },
-        }
+    filter: LeaderboardFilter = {},
+    limit: number = 25
+  ): Promise<RankedLeaderboard> => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (filter.type) params.set("type", filter.type);
+    if (filter.q?.trim()) params.set("q", filter.q.trim());
+    const response = await fetch(
+      `${API_BASE_URL}/challenges/${challengeId}/leaderboard?${params}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!response.ok) {
+      throw new Error(
+        response.status === 404
+          ? "Challenge not found"
+          : `HTTP error! status: ${response.status}`
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const challengeResults: LeaderboardResult[] = await response.json();
-
-      // Group results by submission_id
-      const submissionGroups: { [key: string]: LeaderboardResult[] } = {};
-      challengeResults.forEach((result) => {
-        const submissionId = result.submission_id;
-        if (!submissionGroups[submissionId]) {
-          submissionGroups[submissionId] = [];
-        }
-        submissionGroups[submissionId].push(result);
-      });
-
-      // Convert to LeaderboardEntry format
-      const leaderboardEntries: LeaderboardEntry[] = Object.values(
-        submissionGroups
-      ).map((results) => {
-        const firstResult = results[0];
-        const submission = firstResult.submission;
-
-        // Aggregate metrics for this submission
-        const metrics: { [key: string]: number } = {};
-        results.forEach((result) => {
-          metrics[result.type] = result.score;
-        });
-
-        return {
-          submission_id: submission.id,
-          model_name: submission.model.name,
-          user_id: submission.user_id,
-          description: submission.description,
-          created_at: submission.created_at,
-          metrics,
-        };
-      });
-
-      // Sort by primary metric (CER if available, otherwise first metric)
-      const sortedEntries = [...leaderboardEntries].sort(
-        (a: LeaderboardEntry, b: LeaderboardEntry) => {
-          const aScore =
-            a.metrics.CER ?? a.metrics[Object.keys(a.metrics)[0]] ?? Infinity;
-          const bScore =
-            b.metrics.CER ?? b.metrics[Object.keys(b.metrics)[0]] ?? Infinity;
-          return aScore - bScore; // Lower is better for CER
-        }
-      );
-
-      // Add rank
-      sortedEntries.forEach((entry: LeaderboardEntry, index: number) => {
-        entry.rank = index + 1;
-      });
-
-      // Paginate
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedData = sortedEntries.slice(startIndex, endIndex);
-
-      return {
-        data: paginatedData,
-        pagination: {
-          page,
-          limit,
-          total: sortedEntries.length,
-          totalPages: Math.ceil(sortedEntries.length / limit),
-        },
-        message: "Leaderboard fetched successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-      // Fallback to empty result
-      return {
-        data: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0,
-        },
-        message: "Failed to fetch leaderboard",
-        success: false,
-      };
     }
+    return response.json();
   },
 
   // Submit to a challenge; resolves once accepted (202, pending)
@@ -585,38 +538,19 @@ export const challengeApi = {
     }
   },
 
-  // Get submission by ID
-  getSubmissionById: async (
+  // Everything public about one Submission, for its detail page. Signed in,
+  // the submitter and admins also get it while unscored or failed.
+  getSubmissionDetail: async (
     submissionId: string
-  ): Promise<ApiResponse<SubmissionResponse>> => {
-    try {
-      const headers = await getAuthHeaders();
-
-      const response = await fetch(
-        `${API_BASE_URL}/submissions/${submissionId}`,
-        {
-          method: "GET",
-          headers,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const submission = await response.json();
-
-      return {
-        data: submission,
-        message: "Submission fetched successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error fetching submission:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to fetch submission"
-      );
+  ): Promise<SubmissionDetailView> => {
+    const headers = await getAuthHeaders("none");
+    const response = await fetch(`${API_BASE_URL}/submissions/${submissionId}`, {
+      headers,
+    });
+    if (!response.ok) {
+      throw new SubmissionReadError(response.status);
     }
+    return response.json();
   },
 
   // Delete submission by ID
@@ -689,55 +623,6 @@ export const challengeApi = {
     }
     const submission: UserSubmission = await response.json();
     return { data: submission, message: "Resync queued", success: true };
-  },
-
-  // Get leaderboard results (deprecated - use individual challenge endpoints)
-  getLeaderboardResults: async (): Promise<
-    ApiResponse<LeaderboardResult[]>
-  > => {
-    try {
-      const headers = await getAuthHeaders();
-
-      const response = await fetch(`${API_BASE_URL}/results/leaderboard`, {
-        method: "GET",
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const results = await response.json();
-
-      return {
-        data: results,
-        message: "Leaderboard results fetched successfully",
-        success: true,
-      };
-    } catch (error) {
-      console.error("Error fetching leaderboard results:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch leaderboard results"
-      );
-    }
-  },
-
-  // Get all leaderboard data and process it for display (deprecated - use individual challenge endpoints)
-  getAllLeaderboards: async (): Promise<
-    ApiResponse<{ [challengeId: string]: LeaderboardEntry[] }>
-  > => {
-    console.warn(
-      "getAllLeaderboards is deprecated. Use individual challenge endpoints via useAllLeaderboards hook instead."
-    );
-
-    // Return empty data to avoid breaking existing code
-    return {
-      data: {},
-      message: "Function deprecated - use individual challenge endpoints",
-      success: false,
-    };
   },
 
   // Update challenge
