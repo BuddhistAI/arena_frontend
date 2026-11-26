@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { challengeApi } from "../api/challenge";
 import type {
+  ApiResponse,
   SubmissionRequest,
   UserSubmission,
   ChallengeCreateRequest,
@@ -87,9 +88,13 @@ const isBeingPublished = (submission: UserSubmission) =>
 const isInProgress = (submission: UserSubmission) =>
   isBeingScored(submission) || isBeingPublished(submission);
 
-// Hook for fetching current user's submissions. While any of them is still
-// being scored or published it refetches every few seconds, so statuses and
-// repo links update in place.
+// While any Submission is still being scored or published, refetch every few
+// seconds so statuses and repo links update in place.
+const pollWhileInProgress = (query: {
+  state: { data?: ApiResponse<UserSubmission[]> };
+}) =>
+  query.state.data?.data.some(isInProgress) ? SCORING_POLL_INTERVAL_MS : false;
+
 export const useUserSubmissions = ({ enabled = true } = {}) => {
   return useQuery({
     queryKey: userSubmissionsKey,
@@ -97,16 +102,14 @@ export const useUserSubmissions = ({ enabled = true } = {}) => {
     enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: (query) =>
-      query.state.data?.data.some(isInProgress) ? SCORING_POLL_INTERVAL_MS : false,
+    refetchInterval: pollWhileInProgress,
   });
 };
 
 const challengeSubmissionsKey = (challengeId: string) =>
   ["challengeSubmissions", challengeId] as const;
 
-// Every Submission to a Challenge (admin sync view), polled like
-// useUserSubmissions while any is being scored or published.
+// Every Submission to a Challenge, for the admin sync view.
 export const useChallengeSubmissions = (
   challengeId: string,
   { enabled = true } = {}
@@ -115,8 +118,7 @@ export const useChallengeSubmissions = (
     queryKey: challengeSubmissionsKey(challengeId),
     queryFn: () => challengeApi.getChallengeSubmissions(challengeId),
     enabled: enabled && !!challengeId,
-    refetchInterval: (query) =>
-      query.state.data?.data.some(isInProgress) ? SCORING_POLL_INTERVAL_MS : false,
+    refetchInterval: pollWhileInProgress,
   });
 };
 
