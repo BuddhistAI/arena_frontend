@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth0 } from "../hooks/useAuth0";
 import { useCurrentUser, useUpdateUserProfile } from "../hooks/useUsers";
@@ -16,6 +17,7 @@ import {
 // The public username Submissions are published under. The server checks it
 // (unique, 3 to 30 of a-z, 0-9, - and _) and its refusal is shown inline.
 const UsernameField = ({ current }: { current: string }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const updateProfile = useUpdateUserProfile();
   const [draft, setDraft] = useState(current);
@@ -43,7 +45,7 @@ const UsernameField = ({ current }: { current: string }) => {
         htmlFor="username"
         className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
       >
-        Public username
+        {t("settings.publicUsername")}
       </label>
       <div className="flex gap-3">
         <div className="relative flex-1">
@@ -76,7 +78,7 @@ const UsernameField = ({ current }: { current: string }) => {
           className="flex items-center px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-500 disabled:bg-neutral-400 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors duration-200"
         >
           <Save className="w-4 h-4 mr-2" />
-          {updateProfile.isPending ? "Saving..." : "Save"}
+          {updateProfile.isPending ? t("settings.savingUsername") : t("settings.saveUsername")}
         </button>
       </div>
       {error ? (
@@ -85,14 +87,11 @@ const UsernameField = ({ current }: { current: string }) => {
         </p>
       ) : saved ? (
         <p id="username-error" role="status" className="mt-1 text-sm text-green-700 dark:text-green-400">
-          Username saved.
+          {t("settings.usernameSaved")}
         </p>
       ) : null}
       <p id="username-hint" className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-        Your Submissions are published under this name on the Leaderboard and in
-        public Challenge Repos. Use 3 to 30 lowercase letters, digits, - or _.
-        Submissions already published to a repo keep the name they were
-        published with.
+        {t("settings.usernameHint")}
       </p>
     </form>
   );

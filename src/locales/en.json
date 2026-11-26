@@ -203,7 +203,12 @@
     "notifications": "Notifications",
     "privacy": "Privacy",
     "account": "Account",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "publicUsername": "Public username",
+    "saveUsername": "Save",
+    "savingUsername": "Saving...",
+    "usernameSaved": "Username saved.",
+    "usernameHint": "Your Submissions are published under this name on the Leaderboard and in public Challenge Repos. Use 3 to 30 lowercase letters, digits, - or _. Submissions already published to a repo keep the name they were published with."
   },
   "auth": {
     "welcomeBack": "Welcome back",
@@ -412,7 +417,7 @@
     "submittedOn": "submitted {{date}}",
     "description": "Description",
     "noDescription": "No description.",
-    "score": "Score",
+    "headlineMetric": "Headline Metric",
     "details": "Details",
     "modelLink": "Model link",
     "repoFolder": "Challenge Repo",
@@ -422,5 +427,16 @@
     "copyFailed": "Could not copy the prompt",
     "syncFailed": "Publishing to the Challenge Repo failed.",
     "resyncQueued": "Resync queued"
+  },
+  "submissionType": {
+    "model": "Model",
+    "prompt": "Prompt",
+    "skill": "Skill"
+  },
+  "leaderboardFilters": {
+    "all": "All",
+    "typeTabs": "Submission Type",
+    "searchLabel": "Search the Leaderboard",
+    "searchPlaceholder": "Search name, submitter or model"
   }
 }

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowLeft, Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
-import { SubmissionReadError, apiUrl } from "../api/challenge";
+import { SubmissionReadError } from "../api/challenge";
 import { useResyncSubmission, useSubmissionDetail } from "../hooks/useChallenges";
 import { useCurrentUser } from "../hooks/useUsers";
 import SubmissionTypeBadge from "../components/SubmissionTypeBadge";
@@ -32,7 +32,7 @@ const SubmissionDetail = () => {
     return <Centered>{t("submissionDetail.loading")}</Centered>;
   }
   // A shared link to a deleted Submission says so, and nothing else.
-  if (error instanceof SubmissionReadError && error.status === 410) {
+  if (error instanceof SubmissionReadError && error.outcome === "deleted") {
     return (
       <Centered>
         <h1 className="text-xl font-semibold text-neutral-700 dark:text-neutral-100">
@@ -53,7 +53,7 @@ const SubmissionDetail = () => {
   );
 
   if (error || !submission) {
-    const notFound = error instanceof SubmissionReadError && error.status === 404;
+    const notFound = error instanceof SubmissionReadError && error.outcome === "notFound";
     return (
       <div className="max-w-4xl mx-auto px-4">
         <div className="mb-6">{backLink}</div>
@@ -76,7 +76,7 @@ const SubmissionDetail = () => {
       <div>{backLink}</div>
       <Header submission={submission} />
       {submission.status === "completed" ? (
-        <Score submission={submission} />
+        <HeadlineMetric submission={submission} />
       ) : (
         <Status submission={submission} />
       )}
@@ -135,17 +135,17 @@ const Header = ({ submission }: { submission: SubmissionDetailView }) => {
 };
 
 // The Headline Metric under the Scorer's label, then the Public Summary.
-const Score = ({ submission }: { submission: SubmissionDetailView }) => {
+const HeadlineMetric = ({ submission }: { submission: SubmissionDetailView }) => {
   const { t } = useTranslation();
   const { scorer } = submission;
   return (
     <section className={panelClass}>
-      <h2 className={headingClass}>{t("submissionDetail.score")}</h2>
+      <h2 className={headingClass}>{t("submissionDetail.headlineMetric")}</h2>
       <dl className="flex flex-wrap gap-x-10 gap-y-3">
         <div>
           <dt className="text-sm text-neutral-500 dark:text-neutral-400">{scorer.label}</dt>
           <dd className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
-            {formatMetric(submission.headline_metric, scorer.format)}
+            {formatMetric(submission.headline_metric, scorer.display_format)}
           </dd>
         </div>
         {(submission.public_summary ?? []).map((entry) => (
@@ -231,7 +231,7 @@ const Details = ({ submission }: { submission: SubmissionDetailView }) => {
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className={cn(headingClass, "mb-0")}>{t("submissionDetail.details")}</h2>
         <div className="flex items-center gap-2">
-          {submission.download_url && <DownloadButton href={apiUrl(submission.download_url)} />}
+          {submission.download_url && <DownloadButton path={submission.download_url} />}
           <AdminResync submission={submission} />
         </div>
       </div>

@@ -24,11 +24,6 @@ const API_BASE_URL =
 // An absolute URL for a path the API returns relative to its root.
 export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
-// Where a Leaderboard row with `has_download` downloads from; a detail page
-// uses its `download_url` instead. No sign-in.
-export const submissionDownloadUrl = (submissionId: string) =>
-  apiUrl(`/submissions/${submissionId}/download`);
-
 // A failed create: `message` is the summary, `errors` lists each problem
 // in the uploaded data when the backend reports them (422).
 export class ChallengeCreateError extends Error {
@@ -53,21 +48,33 @@ export class SubmissionCreateError extends Error {
   }
 }
 
-// A Submission that could not be read: 404 when it does not exist or the
-// viewer may not see it, 410 when it was deleted.
+// What a refused Submission read means. "notFound" (404: it does not exist,
+// or the viewer may not see it) and "deleted" (410) are answers to show;
+// "failed" is anything else, worth retrying.
+export type SubmissionReadOutcome = "notFound" | "deleted" | "failed";
+
+const READ_OUTCOMES: Partial<Record<number, SubmissionReadOutcome>> = {
+  404: "notFound",
+  410: "deleted",
+};
+
+const READ_MESSAGES: Record<SubmissionReadOutcome, string> = {
+  notFound: "Submission not found",
+  deleted: "This Submission was deleted",
+  failed: "Failed to load the Submission",
+};
+
+// A Submission that could not be read, with what its status means.
 export class SubmissionReadError extends Error {
   status: number;
+  outcome: SubmissionReadOutcome;
 
   constructor(status: number) {
-    super(
-      status === 410
-        ? "This Submission was deleted"
-        : status === 404
-          ? "Submission not found"
-          : `Failed to load the Submission (status ${status})`
-    );
+    const outcome = READ_OUTCOMES[status] ?? "failed";
+    super(`${READ_MESSAGES[outcome]} (status ${status})`);
     this.name = "SubmissionReadError";
     this.status = status;
+    this.outcome = outcome;
   }
 }
 

@@ -1,4 +1,4 @@
-import type { MetricFormat } from "../utils/formatMetric";
+import type { DisplayFormat } from "../utils/formatMetric";
 
 export interface Category {
   id: string;
@@ -174,7 +174,7 @@ export interface ScorerParameter {
 export interface PublicSummaryEntry {
   key: string;
   label: string;
-  format: MetricFormat;
+  format: DisplayFormat;
 }
 
 // A Public Summary entry of a scored Submission, with its value.
@@ -186,7 +186,7 @@ export interface Scorer {
   name: string;
   label: string;
   direction: ScorerDirection;
-  display_format: MetricFormat;
+  display_format: DisplayFormat;
   public_summary: PublicSummaryEntry[];
   parameter_schema: {
     type?: "object";
@@ -195,12 +195,12 @@ export interface Scorer {
 }
 
 // GET /challenges/{id}/leaderboard: one page of a Challenge's Leaderboard,
-// ranked on the server. A row's `rank` is its place on the whole Leaderboard.
+// ranked on the server. A row's `rank` is its Rank on the whole Leaderboard, whatever the filter.
 export interface LeaderboardScorer {
   name: string;
   label: string;
   direction: ScorerDirection;
-  format: MetricFormat;
+  display_format: DisplayFormat;
   public_summary: PublicSummaryEntry[];
 }
 
@@ -213,7 +213,8 @@ export interface LeaderboardRow {
   created_at: string;
   headline_metric: number;
   preferred_model: string | null;
-  has_download: boolean;
+  // Prompt and Skill: where to download, relative to the API root; null for a Model.
+  download_url: string | null;
 }
 
 // How many rows the whole Leaderboard holds, in all and per Submission Type,
@@ -234,6 +235,8 @@ export interface LeaderboardFilter {
 export interface RankedLeaderboard {
   scorer: LeaderboardScorer;
   counts: LeaderboardCounts;
+  // Rows the type filter and search show, on all pages together.
+  total: number;
   page: number;
   limit: number;
   rows: LeaderboardRow[];

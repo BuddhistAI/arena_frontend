@@ -163,7 +163,12 @@
     "notifications": "བརྡ་ཐོ།",
     "privacy": "གསང་བ།",
     "account": "རིས་ཁྲ།",
-    "preferences": "འདོད་པ།"
+    "preferences": "འདོད་པ།",
+    "publicUsername": "Public username",
+    "saveUsername": "Save",
+    "savingUsername": "Saving...",
+    "usernameSaved": "Username saved.",
+    "usernameHint": "Your Submissions are published under this name on the Leaderboard and in public Challenge Repos. Use 3 to 30 lowercase letters, digits, - or _. Submissions already published to a repo keep the name they were published with."
   },
   "auth": {
     "welcomeBack": "སླར་བྱོན་པར་དགའ།",
@@ -319,5 +324,16 @@
     "deleteFailed": "ཕུལ་བ་སུབ་མ་ཐུབ།",
     "limitReached": "དེ་རིང་གདེང་འཇལ་འདི་ལ་ཕུལ་ཚད་ ༡༠ ཟིན་སོང་།",
     "limitResetsAt": "ཁྱེད་ཀྱི་དུས་ཚོད་ {{local}} ནས་ ({{utc}} UTC) ཡང་བསྐྱར་ཕུལ་ཆོག"
+  },
+  "submissionType": {
+    "model": "Model",
+    "prompt": "Prompt",
+    "skill": "Skill"
+  },
+  "leaderboardFilters": {
+    "all": "All",
+    "typeTabs": "Submission Type",
+    "searchLabel": "Search the Leaderboard",
+    "searchPlaceholder": "Search name, submitter or model"
   }
 }

@@ -36,7 +36,7 @@ const RowTooltip = ({ active, payload, scorer }: TooltipProps) => {
         #{row.rank} {row.name}
       </p>
       <p className="text-xs text-neutral-600 dark:text-neutral-400">
-        {scorer.label}: {formatMetric(row.headline_metric, scorer.format)}
+        {scorer.label}: {formatMetric(row.headline_metric, scorer.display_format)}
       </p>
     </div>
   );
@@ -60,7 +60,7 @@ const HeadlineMetricChart = ({ rows, scorer, className = "" }: HeadlineMetricCha
         />
         <YAxis
           fontSize={10}
-          tickFormatter={(value: number) => formatMetric(value, scorer.format)}
+          tickFormatter={(value: number) => formatMetric(value, scorer.display_format)}
         />
         <Tooltip content={<RowTooltip scorer={scorer} />} />
         <Bar dataKey="headline_metric" name={scorer.label} fill="#525252" radius={[2, 2, 0, 0]} />
