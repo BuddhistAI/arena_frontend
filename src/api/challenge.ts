@@ -656,13 +656,16 @@ export const challengeApi = {
     challengeId: string
   ): Promise<ApiResponse<UserSubmission[]>> => {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/submissions`, { headers });
+    const query = new URLSearchParams({ challenge_id: challengeId });
+    const response = await fetch(`${API_BASE_URL}/submissions?${query}`, {
+      headers,
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch submissions (status ${response.status})`);
     }
     const submissions: UserSubmission[] = await response.json();
     return {
-      data: submissions.filter((s) => s.challenge_id === challengeId),
+      data: submissions,
       message: "Challenge submissions fetched successfully",
       success: true,
     };
